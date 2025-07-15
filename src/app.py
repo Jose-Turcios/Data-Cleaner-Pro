@@ -1,0 +1,667 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import os
+import tempfile
+import re
+from datetime import datetime
+from utils.data_cleaner import DataCleaner
+from utils.file_handler import FileHandler
+from mongo_extractor import crear_dataframes_de_todas_las_colecciones
+
+@st.cache_data
+def load_mongo_dataframes():
+    """Carga los DataFrames de MongoDB con cache"""
+    try:
+        dataframes = crear_dataframes_de_todas_las_colecciones()
+        if dataframes:
+            return dataframes
+        else:
+            return {}
+    except Exception as e:
+        st.error(f"Error cargando DataFrames de MongoDB: {e}")
+        return {}
+
+def detect_brand_from_filename(filename):
+    """Detecta la marca desde el nombre del archivo"""
+    filename_upper = filename.upper()
+    
+    # Buscar patrones L+número+marca (ej: L1CH, L2SK, L3NE, L4CL)
+    l_pattern = re.search(r'L\d+([A-Z]{2})', filename_upper)
+    if l_pattern:
+        return l_pattern.group(1)
+    
+    # Buscar patrones directos (ej: ejemplo_CH.csv)
+    for marca in ['CH', 'CL', 'NE', 'SK']:
+        if marca in filename_upper:
+            return marca
+    
+    return None
+
+# Configuración de la página
+st.set_page_config(
+    page_title="Data Cleaner Pro",
+    page_icon="⚡",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# CSS personalizado para diseño profesional
+st.markdown("""
+<style>
+    /* Importar fuente moderna */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    /* Variables CSS */
+    :root {
+        --primary-color: #2563eb;
+        --secondary-color: #64748b;
+        --success-color: #059669;
+        --warning-color: #d97706;
+        --error-color: #dc2626;
+        --bg-primary: #ffffff;
+        --bg-secondary: #f8fafc;
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --border-color: #e2e8f0;
+        --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    }
+    
+    /* Tipografía */
+    .stApp {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        background-color: var(--bg-secondary);
+    }
+    
+    /* Header principal */
+    .main-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, #3b82f6 100%);
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow);
+    }
+    
+    .main-header h1 {
+        color: white;
+        font-weight: 700;
+        font-size: 2.5rem;
+        margin: 0;
+        text-align: center;
+    }
+    
+    .main-header p {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1.1rem;
+        text-align: center;
+        margin: 0.5rem 0 0 0;
+        font-weight: 400;
+    }
+    
+    /* Cards */
+    .metric-card {
+        background: var(--bg-primary);
+        padding: 1.5rem;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--shadow);
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin: 0;
+    }
+    
+    .metric-label {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        margin: 0.25rem 0 0 0;
+    }
+    
+    /* Sidebar */
+    .stSidebar {
+        background-color: var(--bg-primary);
+        border-right: 1px solid var(--border-color);
+    }
+    
+    .sidebar-content {
+        padding: 1rem;
+    }
+    
+    /* Botones */
+    .stButton > button {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        box-shadow: var(--shadow);
+    }
+    
+    .stButton > button:hover {
+        background: #1d4ed8;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Upload area */
+    .upload-area {
+        border: 2px dashed var(--border-color);
+        border-radius: 8px;
+        padding: 2rem;
+        text-align: center;
+        background: var(--bg-primary);
+        transition: all 0.2s ease;
+    }
+    
+    .upload-area:hover {
+        border-color: var(--primary-color);
+        background: #fafbff;
+    }
+    
+    /* Status badges */
+    .status-success {
+        background: #d1fae5;
+        color: var(--success-color);
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        display: inline-block;
+    }
+    
+    .status-warning {
+        background: #fef3c7;
+        color: var(--warning-color);
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        display: inline-block;
+    }
+    
+    .status-error {
+        background: #fee2e2;
+        color: var(--error-color);
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        display: inline-block;
+    }
+    
+    /* Tablas */
+    .stDataFrame {
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: var(--shadow);
+    }
+    
+    /* Separadores */
+    hr {
+        border: none;
+        height: 1px;
+        background: var(--border-color);
+        margin: 2rem 0;
+    }
+    
+    /* Info boxes */
+    .info-box {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .info-box-success {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .info-box-warning {
+        background: #fffbeb;
+        border: 1px solid #fed7aa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    /* Ocular elementos innecesarios */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    .stDeployButton {display: none;}
+</style>
+""", unsafe_allow_html=True)
+
+# Header principal con diseño moderno
+st.markdown("""
+<div class="main-header">
+    <h1>⚡ Data Cleaner Pro</h1>
+    <p>Procesamiento inteligente de datos con integración MongoDB</p>
+</div>
+""", unsafe_allow_html=True)
+
+# Sidebar con diseño mejorado
+with st.sidebar:
+    st.markdown("### ⚙️ Configuración")
+    
+    # MongoDB status y refresh
+    st.markdown("#### 🗄️ Base de Datos")
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        try:
+            mongo_dataframes = load_mongo_dataframes()
+            if mongo_dataframes:
+                st.markdown(f'<span class="status-success">✓ {len(mongo_dataframes)} colecciones</span>', unsafe_allow_html=True)
+            else:
+                st.markdown('<span class="status-warning">⚠ Sin conexión</span>', unsafe_allow_html=True)
+        except:
+            st.markdown('<span class="status-error">✗ Error conexión</span>', unsafe_allow_html=True)
+    
+    with col2:
+        if st.button("🔄", help="Refrescar MongoDB", key="refresh_mongo"):
+            with st.spinner(""):
+                st.cache_data.clear()
+                load_mongo_dataframes.clear()
+                st.success("✓", icon="✅")
+    
+    st.markdown("---")
+    
+    # Selector de marca con diseño mejorado
+    st.markdown("#### 🏷️ Marca")
+    brand = st.selectbox(
+        "Seleccionar marca:",
+        ["CH", "CL", "SK", "NE"],
+        help="Elige la marca a procesar",
+        label_visibility="collapsed"
+    )
+    
+    # Información compacta de la marca
+    brand_info = {
+        "CH": {"name": "Cole Haan", "icon": "👞", "color": "#8B4513"},
+        "CL": {"name": "Columbia", "icon": "🧥", "color": "#1E40AF"},
+        "SK": {"name": "Skechers", "icon": "👟", "color": "#DC2626"},
+        "NE": {"name": "New Era", "icon": "🧢", "color": "#059669"}
+    }
+    
+    info = brand_info[brand]
+    st.markdown(f"""
+    <div style="background: {info['color']}15; border: 1px solid {info['color']}30; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 1.5rem;">{info['icon']}</span>
+            <span style="font-weight: 600; color: {info['color']};">{info['name']}</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # Información de MongoDB compacta
+    if 'mongo_dataframes' in locals() and mongo_dataframes:
+        st.markdown("#### 📊 Datos Disponibles")
+        for collection_name, df in mongo_dataframes.items():
+            st.markdown(f"**{collection_name}**")
+            st.caption(f"{df.shape[0]:,} registros • {df.shape[1]} campos")
+    
+    st.markdown("---")
+    
+    # Patrones soportados
+    st.markdown("#### 📁 Formatos Soportados")
+    st.markdown("""
+    **Archivos:**
+    • CSV, Excel (.xlsx, .xls)
+    
+    **Patrones:**
+    • `ejemplo_CH.csv`
+    • `L1CH.csv`, `L2SK.csv`
+    
+    **Detección automática** del formato
+    """)
+    
+    # Footer del sidebar
+    st.markdown("---")
+    st.markdown("""
+    <div style="text-align: center; padding: 1rem; color: #64748b; font-size: 0.75rem;">
+        <strong>Data Cleaner Pro</strong><br>
+        v2.0 • MongoDB Integration
+    </div>
+    """, unsafe_allow_html=True)
+
+# Área principal con diseño mejorado
+st.markdown("### � Cargar Archivo")
+
+# Upload area con diseño personalizado
+upload_container = st.container()
+with upload_container:
+    uploaded_file = st.file_uploader(
+        "Selecciona tu archivo",
+        type=['csv', 'xlsx', 'xls'],
+        help="Arrastra y suelta o haz clic para seleccionar",
+        label_visibility="collapsed"
+    )
+
+if uploaded_file is not None:
+    # Detección automática de marca
+    detected_brand = detect_brand_from_filename(uploaded_file.name)
+    
+    # Container para info del archivo
+    file_info_container = st.container()
+    with file_info_container:
+        col1, col2, col3 = st.columns([2, 1, 1])
+        
+        with col1:
+            st.markdown(f"**📄 {uploaded_file.name}**")
+            pattern_type = "Patrón L+número" if re.search(r'L\d+', uploaded_file.name.upper()) else "Patrón directo"
+            st.caption(f"Tipo: {pattern_type}")
+        
+        with col2:
+            if detected_brand and detected_brand != brand:
+                st.markdown(f'<span class="status-warning">Detectado: {detected_brand}</span>', unsafe_allow_html=True)
+                if st.button("🔄 Usar detectado", key="use_detected"):
+                    st.session_state['auto_brand'] = detected_brand
+                    st.rerun()
+            else:
+                st.markdown(f'<span class="status-success">Marca: {brand}</span>', unsafe_allow_html=True)
+        
+        with col3:
+            # Usar marca detectada si está disponible
+            if 'auto_brand' in st.session_state:
+                brand = st.session_state['auto_brand']
+    
+    # Procesar archivo
+    try:
+        file_handler = FileHandler()
+        df = file_handler.read_file(uploaded_file)
+        
+        # Métricas del archivo en cards
+        metrics_container = st.container()
+        with metrics_container:
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value">{len(df):,}</div>
+                    <div class="metric-label">Filas</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col2:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value">{len(df.columns)}</div>
+                    <div class="metric-label">Columnas</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col3:
+                file_size = uploaded_file.size / 1024  # KB
+                size_text = f"{file_size:.1f} KB" if file_size < 1024 else f"{file_size/1024:.1f} MB"
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value">{size_text}</div>
+                    <div class="metric-label">Tamaño</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col4:
+                # Verificar columnas necesarias
+                required_columns = ["ItemName", "ItemCode", "Empresa"]
+                missing_columns = [col for col in required_columns if col not in df.columns]
+                status = "✓ Válido" if not missing_columns else "✗ Incompleto"
+                status_class = "status-success" if not missing_columns else "status-error"
+                
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-label">Estado</div>
+                    <span class="{status_class}">{status}</span>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        # Mostrar errores si los hay
+        if missing_columns:
+            st.error(f"❌ Columnas faltantes: {', '.join(missing_columns)}")
+        
+        # Vista previa de datos
+        st.markdown("### 👁️ Vista Previa")
+        with st.expander("Mostrar datos", expanded=True):
+            st.dataframe(df.head(10), use_container_width=True, height=300)
+        
+        # Botón de procesamiento
+        if not missing_columns:
+            process_container = st.container()
+            with process_container:
+                col1, col2, col3 = st.columns([1, 2, 1])
+                with col2:
+                    if st.button(
+                        "⚡ Procesar Datos", 
+                        type="primary", 
+                        use_container_width=True,
+                        help="Iniciar proceso de limpieza con datos MongoDB"
+                    ):
+                        with st.spinner("🔄 Procesando datos..."):
+                            try:
+                                # Cargar DataFrames de MongoDB
+                                mongo_dataframes = load_mongo_dataframes()
+                                
+                                if not mongo_dataframes:
+                                    st.error("❌ Error al conectar con MongoDB")
+                                    st.stop()
+                                
+                                # Inicializar el limpiador
+                                cleaner = DataCleaner(brand, mongo_dataframes)
+                                
+                                # Procesar los datos
+                                cleaned_df = cleaner.clean_data(df)
+                                
+                                # Guardar en session state
+                                st.session_state['cleaned_data'] = cleaned_df
+                                st.session_state['original_filename'] = uploaded_file.name
+                                st.session_state['processing_brand'] = brand
+                                
+                                st.success("✅ ¡Procesamiento completado!")
+                                st.rerun()
+                                
+                            except Exception as e:
+                                st.error(f"❌ Error: {str(e)}")
+                                with st.expander("Ver detalles del error"):
+                                    st.exception(e)
+    
+    except Exception as e:
+        st.error(f"❌ Error al cargar archivo: {str(e)}")
+
+else:
+    # Placeholder cuando no hay archivo
+    st.markdown("""
+    <div style="text-align: center; padding: 3rem; color: #64748b;">
+        <h3>📁 Selecciona un archivo para comenzar</h3>
+        <p>Soportamos archivos CSV y Excel con detección automática de marca</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+# Mostrar resultados con diseño mejorado
+if 'cleaned_data' in st.session_state:
+    st.markdown("---")
+    
+    # Header de resultados
+    results_header = st.container()
+    with results_header:
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.markdown("### 🎯 Resultados del Procesamiento")
+            brand_used = st.session_state.get('processing_brand', 'N/A')
+            st.caption(f"Procesado como: **{brand_used}** • {st.session_state.get('original_filename', 'archivo.csv')}")
+        
+        with col2:
+            # Botón de descarga principal
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"{brand_used.lower()}_cleaned_{timestamp}.csv"
+            csv_data = st.session_state['cleaned_data'].to_csv(index=False, sep=';')
+            
+            st.download_button(
+                label="💾 Descargar",
+                data=csv_data,
+                file_name=filename,
+                mime="text/csv",
+                type="primary",
+                use_container_width=True
+            )
+    
+    cleaned_df = st.session_state['cleaned_data']
+    
+    # Métricas principales en cards
+    metrics_container = st.container()
+    with metrics_container:
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{len(cleaned_df):,}</div>
+                <div class="metric-label">📊 Total Filas</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{len(cleaned_df.columns)}</div>
+                <div class="metric-label">📋 Columnas</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            null_rows = cleaned_df.isnull().any(axis=1).sum()
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value" style="color: #dc2626;">{null_rows:,}</div>
+                <div class="metric-label">❌ Filas Incompletas</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col4:
+            completeness = ((len(cleaned_df) - null_rows) / len(cleaned_df) * 100) if len(cleaned_df) > 0 else 0
+            color = "#059669" if completeness > 80 else "#d97706" if completeness > 60 else "#dc2626"
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value" style="color: {color};">{completeness:.1f}%</div>
+                <div class="metric-label">✅ Completitud</div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    # Tabs para diferentes vistas
+    tab1, tab2, tab3 = st.tabs(["📋 Datos Procesados", "📈 Análisis de Calidad", "🔧 Plantilla"])
+    
+    with tab1:
+        st.markdown("#### Vista de Datos")
+        st.dataframe(cleaned_df, use_container_width=True, height=400)
+        
+        # Información adicional
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Primeras columnas:**")
+            st.write(list(cleaned_df.columns[:5]))
+        with col2:
+            st.markdown("**Últimas columnas:**")
+            st.write(list(cleaned_df.columns[-5:]))
+    
+    with tab2:
+        st.markdown("#### Análisis de Calidad de Datos")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**Valores Nulos por Columna**")
+            null_counts = cleaned_df.isnull().sum()
+            null_df = pd.DataFrame({
+                'Columna': null_counts.index,
+                'Nulos': null_counts.values,
+                'Porcentaje': (null_counts.values / len(cleaned_df) * 100).round(1)
+            })
+            null_df = null_df[null_df['Nulos'] > 0]  # Solo mostrar columnas con nulos
+            
+            if len(null_df) > 0:
+                st.dataframe(null_df, use_container_width=True, height=300)
+            else:
+                st.success("🎉 ¡No hay valores nulos en ninguna columna!")
+        
+        with col2:
+            st.markdown("**Estadísticas de Tipos de Datos**")
+            dtypes_count = cleaned_df.dtypes.value_counts()
+            dtypes_df = pd.DataFrame({
+                'Tipo': dtypes_count.index.astype(str),
+                'Cantidad': dtypes_count.values
+            })
+            st.dataframe(dtypes_df, use_container_width=True, height=300)
+        
+        # Resumen de calidad
+        st.markdown("#### 📊 Resumen de Calidad")
+        total_cells = len(cleaned_df) * len(cleaned_df.columns)
+        null_cells = cleaned_df.isnull().sum().sum()
+        quality_score = ((total_cells - null_cells) / total_cells * 100) if total_cells > 0 else 0
+        
+        if quality_score >= 95:
+            quality_status = "🟢 Excelente"
+            quality_color = "#059669"
+        elif quality_score >= 80:
+            quality_status = "🟡 Buena"
+            quality_color = "#d97706"
+        else:
+            quality_status = "🔴 Requiere atención"
+            quality_color = "#dc2626"
+        
+        st.markdown(f"""
+        <div style="background: {quality_color}15; border: 1px solid {quality_color}30; border-radius: 8px; padding: 1.5rem; margin: 1rem 0;">
+            <h4 style="color: {quality_color}; margin: 0;">Puntuación de Calidad: {quality_score:.1f}%</h4>
+            <p style="margin: 0.5rem 0 0 0; color: #64748b;">Estado: {quality_status}</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with tab3:
+        st.markdown("#### 📥 Descargar Plantilla")
+        
+        # Crear plantilla basada en el resultado
+        template_data = {
+            "ItemName": ["EJEMPLO/DESCRIPCION/TALLA/COLOR"],
+            "ItemCode": ["12345"],
+            "Empresa": ["EMPRESA_EJEMPLO"]
+        }
+        
+        template_df = pd.DataFrame(template_data)
+        csv_template = template_df.to_csv(index=False, sep=';')
+        
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.download_button(
+                label="📥 Descargar Plantilla CSV",
+                data=csv_template,
+                file_name=f"plantilla_{brand.lower()}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+        
+        st.markdown("#### 💡 Formato Esperado")
+        st.dataframe(template_df, use_container_width=True)
+        
+        st.info("Esta plantilla muestra el formato exacto que debe tener tu archivo para ser procesado correctamente.")
+
+# Footer moderno
+st.markdown("---")
+st.markdown("""
+<div style="text-align: center; padding: 2rem; color: #64748b;">
+    <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">⚡ Data Cleaner Pro</div>
+    <div style="font-size: 0.9rem;">Procesamiento inteligente de datos • Integración MongoDB • v2.0</div>
+</div>
+""", unsafe_allow_html=True)
