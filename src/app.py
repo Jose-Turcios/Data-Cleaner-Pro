@@ -252,6 +252,48 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# Ticker horizontal estático
+try:
+    mongo_dataframes = load_mongo_dataframes()
+    if mongo_dataframes:
+        from datetime import datetime
+        current_time = datetime.now().strftime("%H:%M:%S")
+        
+        # Crear columnas para mostrar datos horizontalmente
+        cols = st.columns([1] + [2] * len(mongo_dataframes) + [1])
+        
+        with cols[0]:
+            st.markdown("""
+            <div style="background: #f8f9fa; border: 1px solid #e9ecef; padding: 0.5rem; border-radius: 6px; text-align: center;">
+                <span style="color: #6c757d; font-weight: 600; font-size: 0.8rem;">🔴 LIVE</span>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        for i, (collection_name, df) in enumerate(mongo_dataframes.items()):
+            with cols[i + 1]:
+                total_records = df.shape[0]
+                total_fields = df.shape[1]
+                
+                st.markdown(f"""
+                <div style="background: #ffffff; border: 1px solid #dee2e6; padding: 0.5rem; border-radius: 6px; text-align: center; border-left: 3px solid #6c757d;">
+                    <div style="color: #212529; font-weight: 600; font-size: 0.8rem;">{collection_name}</div>
+                    <div style="color: #6c757d; font-size: 0.7rem;">{total_records:,} records</div>
+                    <div style="color: #6c757d; font-size: 0.7rem;">{total_fields} fields</div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        with cols[-1]:
+            st.markdown(f"""
+            <div style="background: #f8f9fa; border: 1px solid #e9ecef; padding: 0.5rem; border-radius: 6px; text-align: center;">
+                <span style="color: #6c757d; font-size: 0.7rem;">{current_time}</span>
+            </div>
+            """, unsafe_allow_html=True)
+            
+    else:
+        st.info("📡 Connecting to database...")
+except:
+    st.error("❌ Database connection error")
+
 # Sidebar con diseño mejorado
 with st.sidebar:
     st.markdown("### ⚙️ Configuración")
@@ -275,7 +317,7 @@ with st.sidebar:
             with st.spinner(""):
                 st.cache_data.clear()
                 load_mongo_dataframes.clear()
-                st.success("✓", icon="✅")
+                
     
     st.markdown("---")
     
@@ -308,12 +350,40 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # Información de MongoDB compacta
-    if 'mongo_dataframes' in locals() and mongo_dataframes:
-        st.markdown("#### 📊 Datos Disponibles")
-        for collection_name, df in mongo_dataframes.items():
-            st.markdown(f"**{collection_name}**")
-            st.caption(f"{df.shape[0]:,} registros • {df.shape[1]} campos")
+    # Descargar formatos por marca
+    st.markdown("#### 📥 Descargar Formatos")
+    st.markdown("Descarga el formato de ejemplo para cada marca:")
+    
+    # Definir rutas de archivos de ejemplo
+    example_files = {
+        "CH": "data/ejemplo_CH.csv",
+        "CL": "data/ejemplo_CL.csv", 
+        "SK": "data/ejemplo_SK.csv",
+        "NE": "data/ejemplo_NE.csv"
+    }
+    
+    # Crear botones de descarga para cada marca
+    for marca, file_path in example_files.items():
+        if os.path.exists(file_path):
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    file_content = f.read()
+                
+                brand_name = brand_info[marca]["name"]
+                icon = brand_info[marca]["icon"]
+                
+                st.download_button(
+                    label=f"{icon} {marca} - {brand_name}",
+                    data=file_content,
+                    file_name=f"formato_{marca.lower()}.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                    key=f"download_{marca}"
+                )
+            except Exception as e:
+                st.error(f"Error al cargar formato {marca}: {e}")
+        else:
+            st.warning(f"Formato {marca} no disponible")
     
     st.markdown("---")
     
@@ -340,7 +410,7 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
 # Área principal con diseño mejorado
-st.markdown("### � Cargar Archivo")
+st.markdown("### 📁 Cargar Archivo")
 
 # Upload area con diseño personalizado
 upload_container = st.container()
@@ -352,6 +422,7 @@ with upload_container:
         label_visibility="collapsed"
     )
 
+# Procesar archivo subido
 if uploaded_file is not None:
     # Detección automática de marca
     detected_brand = detect_brand_from_filename(uploaded_file.name)
@@ -490,6 +561,9 @@ else:
         <p>Soportamos archivos CSV y Excel con detección automática de marca</p>
     </div>
     """, unsafe_allow_html=True)
+
+# Espaciado y separador
+st.markdown("<br>", unsafe_allow_html=True)
 
 # Mostrar resultados con diseño mejorado
 if 'cleaned_data' in st.session_state:
