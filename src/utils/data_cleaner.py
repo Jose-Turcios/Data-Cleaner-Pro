@@ -107,6 +107,7 @@ class DataCleaner:
         # Procesamiento similar al original pero usando df_reference en lugar de los archivos L
         # Extraer U_Estilo de ItemName
         cleaned_df['U_Estilo'] = cleaned_df['ItemName'].str.split('/').str[0]
+        cleaned_df['U_Descripcion'] = cleaned_df['ItemName'].str.split('/').str[1]
         
         # Asignar U_Genero y U_Categoria basado en el primer carácter
         conditions = [
@@ -129,14 +130,14 @@ class DataCleaner:
         # Hacer merge con el DataFrame de referencia
         if not df_reference.empty:
             # Seleccionar solo las columnas necesarias del DataFrame de referencia
-            ref_columns = ['U_Estilo', 'U_Descripcion', 'U_Segmentacion_SK', 'U_Zone', 'U_Descrip_Color']
+            ref_columns = ['U_Estilo', 'U_Segmentacion_SK', 'U_Zone', 'U_Descrip_Color']
             ref_columns = [col for col in ref_columns if col in df_reference.columns]
             
             df_reference = df_reference[ref_columns].drop_duplicates('U_Estilo')
             
             # Realizar el merge
             df_resultado = pd.merge(
-                cleaned_df.drop(columns=['U_Descripcion', 'U_Segmentacion_SK', 'U_Zone', 'U_Descrip_Color'], 
+                cleaned_df.drop(columns=[ 'U_Segmentacion_SK', 'U_Zone', 'U_Descrip_Color'], 
                 errors='ignore'),
                 df_reference,
                 on='U_Estilo',

@@ -4,10 +4,159 @@ import numpy as np
 import os
 import tempfile
 import re
+import sys
 from datetime import datetime
 from utils.data_cleaner import DataCleaner
 from utils.file_handler import FileHandler
 from mongo_extractor import crear_dataframes_de_todas_las_colecciones
+
+# Importar configuración de login
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+config_path = os.path.join(parent_dir, 'config', 'database_config.py')
+
+# Cargar configuración directamente
+import importlib.util
+spec = importlib.util.spec_from_file_location("database_config", config_path)
+database_config = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(database_config)
+
+LOGIN_CONFIG = database_config.LOGIN_CONFIG
+
+def show_login_screen():
+    st.set_page_config(
+        page_title="Data Cleaner Pro - Login",
+        page_icon="🔐",
+        layout="centered",
+        initial_sidebar_state="collapsed"
+    )
+    
+    st.markdown("""
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+        
+        .stApp {
+            background: #ffffff;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .login-container {
+            background: #ffffff;
+            padding: 3rem 4rem;
+            max-width: 500px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        
+        .login-title {
+            color: #1a1a1a;
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin: 0 auto 2.5rem auto;
+            letter-spacing: -0.02em;
+            text-align: center;
+            width: 100%;
+            white-space: nowrap;
+            display: block;
+        }
+        
+        
+        .stTextInput > div > div > input {
+            background: #ffffff;
+            border: 1px solid #cccccc;
+            border-radius: 2px;
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 400;
+            transition: border-color 0.2s ease;
+            width: 100%;
+            color: #333333;
+        }
+        
+        .stTextInput > div > div > input:focus {
+            border-color: #555555;
+            outline: 0;
+            box-shadow: 0 0 0 1px #555555;
+        }
+        
+        .stTextInput > div > div > input::placeholder {
+            color: #999999;
+        }
+        
+        .stButton > button {
+            background: #333333;
+            color: white;
+            border: none;
+            border-radius: 2px;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            width: 100%;
+            transition: background-color 0.2s ease;
+            margin-top: 0.75rem;
+        }
+        
+        .stButton > button:hover {
+            background: #222222;
+        }
+        
+        .login-footer {
+            margin-top: 1.5rem;
+            color: #999999;
+            font-size: 0.75rem;
+            font-weight: 400;
+        }
+        
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        .stDeployButton {display: none;}
+        header {visibility: hidden;}
+        
+        .stTextInput > label {
+            display: none;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("<div style='height: 10vh;'></div>", unsafe_allow_html=True)
+    
+    st.markdown(f"""
+    <div class="login-container">
+        <h1 class="login-title">🤖 {LOGIN_CONFIG['title']}</h1>
+    """, unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([0.5, 3, 0.5])
+    with col2:
+        password = st.text_input(
+            "Contraseña",
+            type="password",
+            placeholder="Ingresa tu contraseña",
+            label_visibility="collapsed",
+            key="login_password"
+        )
+        
+        if st.button("Ingresar", type="primary", use_container_width=True):
+            if password == LOGIN_CONFIG['password']:
+                st.session_state['authenticated'] = True
+                st.success("✅ ¡Acceso concedido!")
+                st.rerun()
+            else:
+                st.error("❌ Contraseña incorrecta")
+    
+    st.markdown("""
+        <div class="login-footer">
+            <p>Data Cleaner Pro v2.0</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+def check_authentication():
+    if 'authenticated' not in st.session_state:
+        st.session_state['authenticated'] = False
+    
+    if not st.session_state['authenticated']:
+        show_login_screen()
+        st.stop()
 
 @st.cache_data
 def load_mongo_dataframes():
@@ -37,6 +186,9 @@ def detect_brand_from_filename(filename):
             return marca
     
     return None
+
+# Verificar autenticación antes de mostrar la aplicación principal
+check_authentication()
 
 # Configuración de la página
 st.set_page_config(
@@ -298,6 +450,13 @@ except:
 with st.sidebar:
     st.markdown("### ⚙️ Configuración")
     
+    # Botón de logout
+    if st.button("🚪 Cerrar Sesión", type="secondary", use_container_width=True):
+        st.session_state['authenticated'] = False
+        st.rerun()
+    
+    st.markdown("---")
+    
     # MongoDB status y refresh
     st.markdown("#### 🗄️ Base de Datos")
     col1, col2 = st.columns([2, 1])
@@ -355,11 +514,12 @@ with st.sidebar:
     st.markdown("Descarga el formato de ejemplo para cada marca:")
     
     # Definir rutas de archivos de ejemplo
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Directorio raíz del proyecto
     example_files = {
-        "CH": "data/ejemplo_CH.csv",
-        "CL": "data/ejemplo_CL.csv", 
-        "SK": "data/ejemplo_SK.csv",
-        "NE": "data/ejemplo_NE.csv"
+        "CH": os.path.join(base_dir, "data", "ejemplo_CH.csv"),
+        "CL": os.path.join(base_dir, "data", "ejemplo_CL.csv"),
+        "SK": os.path.join(base_dir, "data", "ejemplo_SK.csv"),
+        "NE": os.path.join(base_dir, "data", "ejemplo_NE.csv")
     }
     
     # Crear botones de descarga para cada marca
@@ -598,7 +758,7 @@ if 'cleaned_data' in st.session_state:
     # Métricas principales en cards
     metrics_container = st.container()
     with metrics_container:
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3, col4, col5 = st.columns(5)
         
         with col1:
             st.markdown(f"""
@@ -616,17 +776,26 @@ if 'cleaned_data' in st.session_state:
             </div>
             """, unsafe_allow_html=True)
         
-        with col3:
-            null_rows = cleaned_df.isnull().any(axis=1).sum()
+        with col4:
+            null_rows = cleaned_df.isnull().sum().sum()
             st.markdown(f"""
             <div class="metric-card">
                 <div class="metric-value" style="color: #dc2626;">{null_rows:,}</div>
-                <div class="metric-label">❌ Filas Incompletas</div>
+                <div class="metric-label">❌ Celdas Incompletas</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col3:
+            complete_rows = cleaned_df.notnull().sum().sum()
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value" style="color: #12a14b;">{complete_rows:,}</div>
+                <div class="metric-label">✅ Celdas Completas</div>
             </div>
             """, unsafe_allow_html=True)
         
-        with col4:
-            completeness = ((len(cleaned_df) - null_rows) / len(cleaned_df) * 100) if len(cleaned_df) > 0 else 0
+        with col5:
+            completeness = (complete_rows - null_rows) / complete_rows * 100 if complete_rows > 0 else 0
             color = "#059669" if completeness > 80 else "#d97706" if completeness > 60 else "#dc2626"
             st.markdown(f"""
             <div class="metric-card">
@@ -636,7 +805,7 @@ if 'cleaned_data' in st.session_state:
             """, unsafe_allow_html=True)
     
     # Tabs para diferentes vistas
-    tab1, tab2, tab3 = st.tabs(["📋 Datos Procesados", "📈 Análisis de Calidad", "🔧 Plantilla"])
+    tab1, tab2 = st.tabs(["📋 Datos Procesados", "📈 Análisis de Calidad"])
     
     with tab1:
         st.markdown("#### Vista de Datos")
@@ -703,33 +872,7 @@ if 'cleaned_data' in st.session_state:
         </div>
         """, unsafe_allow_html=True)
     
-    with tab3:
-        st.markdown("#### 📥 Descargar Plantilla")
-        
-        # Crear plantilla basada en el resultado
-        template_data = {
-            "ItemName": ["EJEMPLO/DESCRIPCION/TALLA/COLOR"],
-            "ItemCode": ["12345"],
-            "Empresa": ["EMPRESA_EJEMPLO"]
-        }
-        
-        template_df = pd.DataFrame(template_data)
-        csv_template = template_df.to_csv(index=False, sep=';')
-        
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            st.download_button(
-                label="📥 Descargar Plantilla CSV",
-                data=csv_template,
-                file_name=f"plantilla_{brand.lower()}.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
-        
-        st.markdown("#### 💡 Formato Esperado")
-        st.dataframe(template_df, use_container_width=True)
-        
-        st.info("Esta plantilla muestra el formato exacto que debe tener tu archivo para ser procesado correctamente.")
+    
 
 # Footer moderno
 st.markdown("---")
