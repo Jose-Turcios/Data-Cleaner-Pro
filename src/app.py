@@ -10,17 +10,12 @@ from utils.data_cleaner import DataCleaner
 from utils.file_handler import FileHandler
 from mongo_extractor import crear_dataframes_de_todas_las_colecciones
 
-# Importar configuración de login
-parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-config_path = os.path.join(parent_dir, 'config', 'database_config.py')
-
-# Cargar configuración directamente
-import importlib.util
-spec = importlib.util.spec_from_file_location("database_config", config_path)
-database_config = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(database_config)
-
-LOGIN_CONFIG = database_config.LOGIN_CONFIG
+# Configuración de autenticación
+LOGIN_CONFIG = {
+    "password": "d@t@.2026",
+    "title": "Data Cleaner Pro",
+    "subtitle": "Sistema de Procesamiento de Limpieza de Datos"
+}
 
 def show_login_screen():
     st.set_page_config(
