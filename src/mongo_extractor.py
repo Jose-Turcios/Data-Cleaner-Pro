@@ -6,8 +6,17 @@ import sys
 import os
 from dotenv import load_dotenv
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from config.database_config import MONGO_CONFIG
+# Importar configuración de MongoDB
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+config_path = os.path.join(parent_dir, 'config', 'database_config.py')
+
+# Cargar configuración directamente
+import importlib.util
+spec = importlib.util.spec_from_file_location("database_config", config_path)
+database_config = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(database_config)
+
+MONGO_CONFIG = database_config.MONGO_CONFIG
 
 load_dotenv()
 
