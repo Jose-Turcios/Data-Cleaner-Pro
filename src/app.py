@@ -447,7 +447,7 @@ with st.sidebar:
     
     # Menú de acciones
     action = st.selectbox(
-        "⚙️ Acciones",
+        
         ["Seleccionar acción...", "🔄 Actualizar Base de Datos", "🚪 Cerrar Sesión"],
         key="action_menu",
         help="Selecciona una acción para ejecutar"
