@@ -445,35 +445,26 @@ except:
 with st.sidebar:
     st.markdown("### ⚙️ Configuración")
     
-    # Botón de logout
-    if st.button("🚪 Cerrar Sesión", type="secondary", use_container_width=True):
+    # Menú de acciones
+    action = st.selectbox(
+        "⚙️ Acciones",
+        ["Seleccionar acción...", "🔄 Actualizar Base de Datos", "🚪 Cerrar Sesión"],
+        key="action_menu",
+        help="Selecciona una acción para ejecutar"
+    )
+    
+    # Ejecutar acción seleccionada
+    if action == "🚪 Cerrar Sesión":
         st.session_state['authenticated'] = False
         st.rerun()
+    elif action == "🔄 Actualizar Base de Datos":
+        with st.spinner("Actualizando base de datos..."):
+            st.cache_data.clear()
+            load_mongo_dataframes.clear()
+        st.success("✅ Base de datos actualizada")
     
     st.markdown("---")
     
-    # MongoDB status y refresh
-    st.markdown("#### 🗄️ Base de Datos")
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        try:
-            mongo_dataframes = load_mongo_dataframes()
-            if mongo_dataframes:
-                st.markdown(f'<span class="status-success">✓ {len(mongo_dataframes)} colecciones</span>', unsafe_allow_html=True)
-            else:
-                st.markdown('<span class="status-warning">⚠ Sin conexión</span>', unsafe_allow_html=True)
-        except:
-            st.markdown('<span class="status-error">✗ Error conexión</span>', unsafe_allow_html=True)
-    
-    with col2:
-        if st.button("🔄", help="Refrescar MongoDB", key="refresh_mongo"):
-            with st.spinner(""):
-                st.cache_data.clear()
-                load_mongo_dataframes.clear()
-                
-    
-    st.markdown("---")
     
     # Selector de marca con diseño mejorado
     st.markdown("#### 🏷️ Marca")
@@ -542,21 +533,9 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # Patrones soportados
-    st.markdown("#### 📁 Formatos Soportados")
-    st.markdown("""
-    **Archivos:**
-    • CSV, Excel (.xlsx, .xls)
     
-    **Patrones:**
-    • `ejemplo_CH.csv`
-    • `L1CH.csv`, `L2SK.csv`
-    
-    **Detección automática** del formato
-    """)
     
     # Footer del sidebar
-    st.markdown("---")
     st.markdown("""
     <div style="text-align: center; padding: 1rem; color: #64748b; font-size: 0.75rem;">
         <strong>Data Cleaner Pro</strong><br>
