@@ -760,8 +760,9 @@ with tab2:
             
             # Verificar si existen las columnas necesarias
             if 'Empresa' in df.columns and 'ItemCode' in df.columns:
-                # Buscar columnas que empiecen con 'U' o 'u' (case insensitive)
-                u_columns = [col for col in df.columns if col.upper().startswith('U')]
+                # Buscar columnas que empiecen con 'U' o 'u' (case insensitive) excluyendo columnas específicas
+                excluded_columns = ['U_Sellitem', 'Update', 'U_Style','u_sellitem', 'update', 'u_style']
+                u_columns = [col for col in df.columns if col.upper().startswith('U') and col not in excluded_columns]
                 
                 if u_columns:
                     st.markdown(f"**Columnas encontradas que empiezan con 'U':** {len(u_columns)}")
@@ -787,30 +788,20 @@ with tab2:
                                             new_row = {
                                                 'Pais': '',  # Siempre vacía
                                                 'DB': empresa,
-                                                'Columna': u_col,
-                                                'itemcode': itemcode,
-                                                'valor': valor
+                                                'COLUMNA': u_col,
+                                                'Codigo_SAP': itemcode,
+                                                'VALOR': valor
                                             }
                                             new_rows.append(new_row)
                                 
                                 # Crear el nuevo DataFrame
                                 new_df = pd.DataFrame(new_rows)
                                 
-                                # Formatear la columna "Columna": U mayúscula y primera letra después de cada _ mayúscula
-                                def format_column_name(col_name):
-                                    if '_' not in col_name:
-                                        return col_name.upper()
-                                    else:
-                                        parts = col_name.split('_')
-                                        formatted_parts = [parts[0].upper()]  # Primera parte siempre mayúscula
-                                        for part in parts[1:]:
-                                            formatted_parts.append(part.capitalize())  # Primera letra mayúscula
-                                        return '_'.join(formatted_parts)
+                                # Formatear la columna "COLUMNA": todas las letras mayúsculas
+                                new_df['COLUMNA'] = new_df['COLUMNA'].str.upper()
                                 
-                                new_df['Columna'] = new_df['Columna'].apply(format_column_name)
-                                
-                                # Ordenar por columna "Columna" de forma descendente
-                                new_df = new_df.sort_values('Columna', ascending=False)
+                                # Ordenar por columna "COLUMNA" de forma descendente
+                                new_df = new_df.sort_values('COLUMNA', ascending=False)
                                 
                                 # Guardar en session state
                                 st.session_state['transformed_df'] = new_df
@@ -901,7 +892,7 @@ if 'transformed_df' in st.session_state:
             """, unsafe_allow_html=True)
         
         with col3:
-            unique_columns = transformed_df['Columna'].nunique()
+            unique_columns = transformed_df['COLUMNA'].nunique()
             st.markdown(f"""
             <div class="metric-card">
                 <div class="metric-value">{unique_columns}</div>
@@ -910,11 +901,11 @@ if 'transformed_df' in st.session_state:
             """, unsafe_allow_html=True)
         
         with col4:
-            unique_items = transformed_df['itemcode'].nunique()
+            unique_items = transformed_df['Codigo_SAP'].nunique()
             st.markdown(f"""
             <div class="metric-card">
                 <div class="metric-value">{unique_items}</div>
-                <div class="metric-label">🔢 ItemCodes</div>
+                <div class="metric-label">🔢 Códigos SAP</div>
             </div>
             """, unsafe_allow_html=True)
     
@@ -929,16 +920,16 @@ if 'transformed_df' in st.session_state:
         st.markdown("**Estructura de la Plantilla:**")
         st.write("• **Pais**: Columna vacía")
         st.write("• **DB**: Contenido de la columna 'Empresa'")
-        st.write("• **Columna**: Nombres de columnas que empiezan con 'U'")
-        st.write("• **itemcode**: Código del item")
-        st.write("• **valor**: Valores de las columnas 'U'")
+        st.write("• **COLUMNA**: Nombres de columnas que empiezan con 'U'")
+        st.write("• **Codigo_SAP**: Código del item")
+        st.write("• **VALOR**: Valores de las columnas 'U'")
     
     with col2:
         st.markdown("**Resumen de Transformación:**")
         st.write(f"• Total de registros: {len(transformed_df):,}")
         st.write(f"• Empresas procesadas: {unique_db}")
         st.write(f"• Columnas 'U' encontradas: {unique_columns}")
-        st.write(f"• ItemCodes únicos: {unique_items}")
+        st.write(f"• Códigos SAP únicos: {unique_items}")
 
 # Espaciado y separador
 st.markdown("<br>", unsafe_allow_html=True)
