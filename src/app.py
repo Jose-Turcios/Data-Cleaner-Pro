@@ -443,11 +443,10 @@ except:
 
 # Sidebar con diseño mejorado
 with st.sidebar:
-    st.markdown("### ⚙️ Configuración")
     
     # Menú de acciones
     action = st.selectbox(
-        "⚙️ Acciones",
+        "⚙️ Configuración",
         ["Seleccionar acción...", "🔄 Actualizar Base de Datos", "🚪 Cerrar Sesión"],
         key="action_menu",
         help="Selecciona una acción para ejecutar"
