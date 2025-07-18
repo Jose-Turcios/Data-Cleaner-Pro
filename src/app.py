@@ -542,158 +542,403 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-# Área principal con diseño mejorado
-st.markdown("### 📁 Cargar Archivo")
+# Área principal con tabs
+tab1, tab2 = st.tabs(["🧹 Limpieza de Datos", "📋 Plantillas"])
 
-# Upload area con diseño personalizado
-upload_container = st.container()
-with upload_container:
-    uploaded_file = st.file_uploader(
-        "Selecciona tu archivo",
-        type=['csv', 'xlsx', 'xls'],
-        help="Arrastra y suelta o haz clic para seleccionar",
-        label_visibility="collapsed"
-    )
-
-# Procesar archivo subido
-if uploaded_file is not None:
-    # Detección automática de marca
-    detected_brand = detect_brand_from_filename(uploaded_file.name)
+with tab1:
+    st.markdown("### 📁 Cargar Archivo")
     
-    # Container para info del archivo
-    file_info_container = st.container()
-    with file_info_container:
-        col1, col2, col3 = st.columns([2, 1, 1])
-        
-        with col1:
-            st.markdown(f"**📄 {uploaded_file.name}**")
-            pattern_type = "Patrón L+número" if re.search(r'L\d+', uploaded_file.name.upper()) else "Patrón directo"
-            st.caption(f"Tipo: {pattern_type}")
-        
-        with col2:
-            if detected_brand and detected_brand != brand:
-                st.markdown(f'<span class="status-warning">Detectado: {detected_brand}</span>', unsafe_allow_html=True)
-                if st.button("🔄 Usar detectado", key="use_detected"):
-                    st.session_state['auto_brand'] = detected_brand
-                    st.rerun()
-            else:
-                st.markdown(f'<span class="status-success">Marca: {brand}</span>', unsafe_allow_html=True)
-        
-        with col3:
-            # Usar marca detectada si está disponible
-            if 'auto_brand' in st.session_state:
-                brand = st.session_state['auto_brand']
+    # Upload area con diseño personalizado
+    upload_container = st.container()
+    with upload_container:
+        uploaded_file = st.file_uploader(
+            "Selecciona tu archivo",
+            type=['csv', 'xlsx', 'xls'],
+            help="Arrastra y suelta o haz clic para seleccionar",
+            label_visibility="collapsed"
+        )
     
-    # Procesar archivo
-    try:
-        file_handler = FileHandler()
-        df = file_handler.read_file(uploaded_file)
+    # Procesar archivo subido
+    if uploaded_file is not None:
+        # Detección automática de marca
+        detected_brand = detect_brand_from_filename(uploaded_file.name)
         
-        # Métricas del archivo en cards
-        metrics_container = st.container()
-        with metrics_container:
-            col1, col2, col3, col4 = st.columns(4)
+        # Container para info del archivo
+        file_info_container = st.container()
+        with file_info_container:
+            col1, col2, col3 = st.columns([2, 1, 1])
             
             with col1:
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-value">{len(df):,}</div>
-                    <div class="metric-label">Filas</div>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f"**📄 {uploaded_file.name}**")
+                pattern_type = "Patrón L+número" if re.search(r'L\d+', uploaded_file.name.upper()) else "Patrón directo"
+                st.caption(f"Tipo: {pattern_type}")
             
             with col2:
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-value">{len(df.columns)}</div>
-                    <div class="metric-label">Columnas</div>
-                </div>
-                """, unsafe_allow_html=True)
+                if detected_brand and detected_brand != brand:
+                    st.markdown(f'<span class="status-warning">Detectado: {detected_brand}</span>', unsafe_allow_html=True)
+                    if st.button("🔄 Usar detectado", key="use_detected"):
+                        st.session_state['auto_brand'] = detected_brand
+                        st.rerun()
+                else:
+                    st.markdown(f'<span class="status-success">Marca: {brand}</span>', unsafe_allow_html=True)
             
             with col3:
-                file_size = uploaded_file.size / 1024  # KB
-                size_text = f"{file_size:.1f} KB" if file_size < 1024 else f"{file_size/1024:.1f} MB"
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-value">{size_text}</div>
-                    <div class="metric-label">Tamaño</div>
-                </div>
-                """, unsafe_allow_html=True)
+                # Usar marca detectada si está disponible
+                if 'auto_brand' in st.session_state:
+                    brand = st.session_state['auto_brand']
+        
+        # Continuar con el resto del procesamiento de archivos
+        try:
+            file_handler = FileHandler()
+            df = file_handler.read_file(uploaded_file)
             
-            with col4:
-                # Verificar columnas necesarias
-                required_columns = ["ItemName", "ItemCode", "Empresa"]
-                missing_columns = [col for col in required_columns if col not in df.columns]
-                status = "✓ Válido" if not missing_columns else "✗ Incompleto"
-                status_class = "status-success" if not missing_columns else "status-error"
+            # Métricas del archivo en cards
+            metrics_container = st.container()
+            with metrics_container:
+                col1, col2, col3, col4 = st.columns(4)
                 
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-label">Estado</div>
-                    <span class="{status_class}">{status}</span>
-                </div>
-                """, unsafe_allow_html=True)
-        
-        # Mostrar errores si los hay
-        if missing_columns:
-            st.error(f"❌ Columnas faltantes: {', '.join(missing_columns)}")
-        
-        # Vista previa de datos
-        st.markdown("### 👁️ Vista Previa")
-        with st.expander("Mostrar datos", expanded=True):
-            st.dataframe(df.head(10), use_container_width=True, height=300)
-        
-        # Botón de procesamiento
-        if not missing_columns:
-            process_container = st.container()
-            with process_container:
-                col1, col2, col3 = st.columns([1, 2, 1])
+                with col1:
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-value">{len(df):,}</div>
+                        <div class="metric-label">Filas</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
                 with col2:
-                    if st.button(
-                        "⚡ Procesar Datos", 
-                        type="primary", 
-                        use_container_width=True,
-                        help="Iniciar proceso de limpieza con datos MongoDB"
-                    ):
-                        with st.spinner("🔄 Procesando datos..."):
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-value">{len(df.columns)}</div>
+                        <div class="metric-label">Columnas</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col3:
+                    file_size = uploaded_file.size / 1024  # KB
+                    size_text = f"{file_size:.1f} KB" if file_size < 1024 else f"{file_size/1024:.1f} MB"
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-value">{size_text}</div>
+                        <div class="metric-label">Tamaño</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col4:
+                    # Verificar columnas necesarias
+                    required_columns = ["ItemName", "ItemCode", "Empresa"]
+                    missing_columns = [col for col in required_columns if col not in df.columns]
+                    status = "✓ Válido" if not missing_columns else "✗ Incompleto"
+                    status_class = "status-success" if not missing_columns else "status-error"
+                    
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-label">Estado</div>
+                        <span class="{status_class}">{status}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+            
+            # Mostrar errores si los hay
+            if missing_columns:
+                st.error(f"❌ Columnas faltantes: {', '.join(missing_columns)}")
+            
+            # Vista previa de datos
+            st.markdown("### 👁️ Vista Previa")
+            with st.expander("Mostrar datos", expanded=True):
+                st.dataframe(df.head(10), use_container_width=True, height=300)
+            
+            # Botón de procesamiento
+            if not missing_columns:
+                process_container = st.container()
+                with process_container:
+                    col1, col2, col3 = st.columns([1, 2, 1])
+                    with col2:
+                        if st.button(
+                            "⚡ Procesar Datos", 
+                            type="primary", 
+                            use_container_width=True,
+                            help="Iniciar proceso de limpieza con datos MongoDB"
+                        ):
+                            with st.spinner("🔄 Procesando datos..."):
+                                try:
+                                    # Cargar DataFrames de MongoDB
+                                    mongo_dataframes = load_mongo_dataframes()
+                                    
+                                    if not mongo_dataframes:
+                                        st.error("❌ Error al conectar con MongoDB")
+                                        st.stop()
+                                    
+                                    # Inicializar el limpiador
+                                    cleaner = DataCleaner(brand, mongo_dataframes)
+                                    
+                                    # Procesar los datos
+                                    cleaned_df = cleaner.clean_data(df)
+                                    
+                                    # Guardar en session state
+                                    st.session_state['cleaned_data'] = cleaned_df
+                                    st.session_state['original_filename'] = uploaded_file.name
+                                    st.session_state['processing_brand'] = brand
+                                    
+                                    st.success("✅ ¡Procesamiento completado!")
+                                    st.rerun()
+                                    
+                                except Exception as e:
+                                    st.error(f"❌ Error: {str(e)}")
+                                    with st.expander("Ver detalles del error"):
+                                        st.exception(e)
+        
+        except Exception as e:
+            st.error(f"❌ Error al cargar archivo: {str(e)}")
+
+    else:
+        # Placeholder cuando no hay archivo
+        st.markdown("""
+        <div style="text-align: center; padding: 3rem; color: #64748b;">
+            <h3>📁 Selecciona un archivo para comenzar</h3>
+            <p>Soportamos archivos CSV y Excel con detección automática de marca</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+with tab2:
+    st.markdown("### 📋 Plantilla")
+    
+    # Upload area con diseño personalizado
+    upload_container = st.container()
+    with upload_container:
+        uploaded_file_template = st.file_uploader(
+            "Selecciona tu archivo",
+            type=['csv', 'xlsx', 'xls'],
+            help="Arrastra y suelta o haz clic para seleccionar",
+            key="template_uploader",
+            label_visibility="collapsed"
+        )
+    
+    # Procesar archivo subido
+    if uploaded_file_template is not None:
+        try:
+            file_handler = FileHandler()
+            df = file_handler.read_file(uploaded_file_template)
+            
+            # Métricas del archivo en cards
+            metrics_container = st.container()
+            with metrics_container:
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-value">{len(df):,}</div>
+                        <div class="metric-label">Filas</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col2:
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-value">{len(df.columns)}</div>
+                        <div class="metric-label">Columnas</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col3:
+                    file_size = uploaded_file_template.size / 1024  # KB
+                    size_text = f"{file_size:.1f} KB" if file_size < 1024 else f"{file_size/1024:.1f} MB"
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-value">{size_text}</div>
+                        <div class="metric-label">Tamaño</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            
+            # Vista previa de datos
+            st.markdown("### 👁️ Vista Previa")
+            with st.expander("Mostrar datos", expanded=True):
+                st.dataframe(df.head(10), use_container_width=True, height=300)
+            
+            # Proceso de transformación de DataFrame
+            st.markdown("---")
+            st.markdown("### 🔄 Crear Nueva Plantilla")
+            
+            # Verificar si existen las columnas necesarias
+            if 'Empresa' in df.columns and 'ItemCode' in df.columns:
+                # Buscar columnas que empiecen con 'U' o 'u' (case insensitive)
+                u_columns = [col for col in df.columns if col.upper().startswith('U')]
+                
+                if u_columns:
+                    st.markdown(f"**Columnas encontradas que empiezan con 'U':** {len(u_columns)}")
+                    st.write(u_columns)
+                    
+                    # Botón para procesar
+                    if st.button("⚡ Crear Plantilla Excel", type="primary", use_container_width=True):
+                        with st.spinner("🔄 Transformando datos..."):
                             try:
-                                # Cargar DataFrames de MongoDB
-                                mongo_dataframes = load_mongo_dataframes()
+                                # Crear el nuevo DataFrame
+                                new_rows = []
                                 
-                                if not mongo_dataframes:
-                                    st.error("❌ Error al conectar con MongoDB")
-                                    st.stop()
+                                for index, row in df.iterrows():
+                                    empresa = row['Empresa']
+                                    itemcode = row['ItemCode']
+                                    
+                                    # Para cada columna que empiece con 'U'
+                                    for u_col in u_columns:
+                                        valor = row[u_col]
+                                        
+                                        # Solo incluir si el valor NO es nulo
+                                        if pd.notna(valor):
+                                            new_row = {
+                                                'Pais': '',  # Siempre vacía
+                                                'DB': empresa,
+                                                'Columna': u_col,
+                                                'itemcode': itemcode,
+                                                'valor': valor
+                                            }
+                                            new_rows.append(new_row)
                                 
-                                # Inicializar el limpiador
-                                cleaner = DataCleaner(brand, mongo_dataframes)
+                                # Crear el nuevo DataFrame
+                                new_df = pd.DataFrame(new_rows)
                                 
-                                # Procesar los datos
-                                cleaned_df = cleaner.clean_data(df)
+                                # Formatear la columna "Columna": U mayúscula y primera letra después de cada _ mayúscula
+                                def format_column_name(col_name):
+                                    if '_' not in col_name:
+                                        return col_name.upper()
+                                    else:
+                                        parts = col_name.split('_')
+                                        formatted_parts = [parts[0].upper()]  # Primera parte siempre mayúscula
+                                        for part in parts[1:]:
+                                            formatted_parts.append(part.capitalize())  # Primera letra mayúscula
+                                        return '_'.join(formatted_parts)
+                                
+                                new_df['Columna'] = new_df['Columna'].apply(format_column_name)
+                                
+                                # Ordenar por columna "Columna" de forma descendente
+                                new_df = new_df.sort_values('Columna', ascending=False)
                                 
                                 # Guardar en session state
-                                st.session_state['cleaned_data'] = cleaned_df
-                                st.session_state['original_filename'] = uploaded_file.name
-                                st.session_state['processing_brand'] = brand
+                                st.session_state['transformed_df'] = new_df
+                                st.session_state['original_template_filename'] = uploaded_file_template.name
                                 
-                                st.success("✅ ¡Procesamiento completado!")
+                                st.success("✅ ¡Plantilla creada exitosamente!")
                                 st.rerun()
                                 
                             except Exception as e:
-                                st.error(f"❌ Error: {str(e)}")
-                                with st.expander("Ver detalles del error"):
-                                    st.exception(e)
-    
-    except Exception as e:
-        st.error(f"❌ Error al cargar archivo: {str(e)}")
+                                st.error(f"❌ Error al crear plantilla: {str(e)}")
+                                st.exception(e)
+                else:
+                    st.warning("⚠️ No se encontraron columnas que empiecen con 'U'")
+            else:
+                missing_cols = []
+                if 'Empresa' not in df.columns:
+                    missing_cols.append('Empresa')
+                if 'ItemCode' not in df.columns:
+                    missing_cols.append('ItemCode')
+                st.error(f"❌ Columnas faltantes: {', '.join(missing_cols)}")
+            
+        except Exception as e:
+            st.error(f"❌ Error al cargar archivo: {str(e)}")
+    else:
+        # Placeholder cuando no hay archivo
+        st.markdown("""
+        <div style="text-align: center; padding: 3rem; color: #64748b;">
+            <h3>📁 Selecciona un archivo para comenzar</h3>
+            <p>Soportamos archivos CSV y Excel para crear plantillas</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-else:
-    # Placeholder cuando no hay archivo
-    st.markdown("""
-    <div style="text-align: center; padding: 3rem; color: #64748b;">
-        <h3>📁 Selecciona un archivo para comenzar</h3>
-        <p>Soportamos archivos CSV y Excel con detección automática de marca</p>
-    </div>
-    """, unsafe_allow_html=True)
+# Mostrar resultados de la plantilla transformada
+if 'transformed_df' in st.session_state:
+    st.markdown("---")
+    
+    # Header de resultados de plantilla
+    template_results_header = st.container()
+    with template_results_header:
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.markdown("### 📊 Plantilla Transformada")
+            original_filename = st.session_state.get('original_template_filename', 'archivo.csv')
+            st.caption(f"Generada desde: **{original_filename}**")
+        
+        with col2:
+            # Botón de descarga de Excel
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"plantilla_transformada_{timestamp}.xlsx"
+            
+            # Crear archivo Excel en memoria
+            from io import BytesIO
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                st.session_state['transformed_df'].to_excel(writer, sheet_name='Plantilla', index=False)
+            
+            st.download_button(
+                label="📥 Descargar Excel",
+                data=output.getvalue(),
+                file_name=filename,
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                type="primary",
+                use_container_width=True
+            )
+    
+    transformed_df = st.session_state['transformed_df']
+    
+    # Métricas de la plantilla transformada
+    metrics_container = st.container()
+    with metrics_container:
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{len(transformed_df):,}</div>
+                <div class="metric-label">📊 Total Filas</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            unique_db = transformed_df['DB'].nunique()
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{unique_db}</div>
+                <div class="metric-label">🏢 Empresas Únicas</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            unique_columns = transformed_df['Columna'].nunique()
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{unique_columns}</div>
+                <div class="metric-label">📋 Columnas 'U'</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col4:
+            unique_items = transformed_df['itemcode'].nunique()
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{unique_items}</div>
+                <div class="metric-label">🔢 ItemCodes</div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    # Vista previa de la plantilla transformada
+    st.markdown("### 👁️ Vista Previa de la Plantilla")
+    with st.expander("Mostrar plantilla transformada", expanded=True):
+        st.dataframe(transformed_df.head(20), use_container_width=True, height=400)
+    
+    # Información adicional
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Estructura de la Plantilla:**")
+        st.write("• **Pais**: Columna vacía")
+        st.write("• **DB**: Contenido de la columna 'Empresa'")
+        st.write("• **Columna**: Nombres de columnas que empiezan con 'U'")
+        st.write("• **itemcode**: Código del item")
+        st.write("• **valor**: Valores de las columnas 'U'")
+    
+    with col2:
+        st.markdown("**Resumen de Transformación:**")
+        st.write(f"• Total de registros: {len(transformed_df):,}")
+        st.write(f"• Empresas procesadas: {unique_db}")
+        st.write(f"• Columnas 'U' encontradas: {unique_columns}")
+        st.write(f"• ItemCodes únicos: {unique_items}")
 
 # Espaciado y separador
 st.markdown("<br>", unsafe_allow_html=True)
