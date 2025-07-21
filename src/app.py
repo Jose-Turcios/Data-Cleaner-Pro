@@ -797,8 +797,18 @@ with tab2:
                                 # Crear el nuevo DataFrame
                                 new_df = pd.DataFrame(new_rows)
                                 
-                                # Formatear la columna "COLUMNA": todas las letras mayúsculas
-                                new_df['COLUMNA'] = new_df['COLUMNA'].str.upper()
+                                # Formatear la columna "COLUMNA": U mayúscula y primera letra después de cada _ mayúscula
+                                def format_column_name(col_name):
+                                    if '_' not in col_name:
+                                        return col_name.upper()
+                                    else:
+                                        parts = col_name.split('_')
+                                        formatted_parts = [parts[0].upper()]  # Primera parte siempre mayúscula
+                                        for part in parts[1:]:
+                                            formatted_parts.append(part.capitalize())  # Primera letra mayúscula, resto minúsculas
+                                        return '_'.join(formatted_parts)
+                                
+                                new_df['COLUMNA'] = new_df['COLUMNA'].apply(format_column_name)
                                 
                                 # Ordenar por columna "COLUMNA" de forma descendente
                                 new_df = new_df.sort_values('COLUMNA', ascending=False)
