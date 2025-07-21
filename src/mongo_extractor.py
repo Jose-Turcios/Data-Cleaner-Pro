@@ -6,11 +6,9 @@ import sys
 import os
 from dotenv import load_dotenv
 
-# Configuración de MongoDB
-MONGO_CONFIG = {
-    "mongouri": os.getenv("MONGO_URI", "mongodb+srv://jletona:Jlet11@disresa.jvboi3b.mongodb.net/"),
-    "db": os.getenv("MONGO_DB_NAME", "Line_Plane")
-}
+# Importar configuración desde config
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config.database_config import MONGO_CONFIG
 
 load_dotenv()
 
