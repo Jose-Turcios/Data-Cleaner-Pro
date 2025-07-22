@@ -11,12 +11,18 @@ from utils.file_handler import FileHandler
 from mongo_extractor import crear_dataframes_de_todas_las_colecciones
 
 # Agregar el directorio padre al path para importar config
-import sys
-import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Importar configuración de autenticación
-from config.database_config import LOGIN_CONFIG
+try:
+    # Importar configuración de autenticación
+    from config.database_config import LOGIN_CONFIG
+except ImportError:
+    # Fallback si no se puede importar
+    LOGIN_CONFIG = {
+        "password": os.getenv("LOGIN_PASSWORD"),
+        "title": "Data Cleaner Pro", 
+        "subtitle": "Sistema de Procesamiento de Limpieza de Datos"
+    }
 
 def show_login_screen():
     st.set_page_config(
