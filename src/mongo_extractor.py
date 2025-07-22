@@ -7,8 +7,23 @@ import os
 from dotenv import load_dotenv
 
 # Importar configuración desde config
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config.database_config import MONGO_CONFIG
+try:
+    from config.database_config import MONGO_CONFIG
+except ImportError:
+    # Fallback usando solo variables de entorno
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(current_dir)
+    config_path = os.path.join(parent_dir, 'config', 'database_config.py')
+    
+    if os.path.exists(config_path):
+        sys.path.insert(0, parent_dir)
+        from config.database_config import MONGO_CONFIG
+    else:
+        # Solo usar variables de entorno sin valores por defecto
+        MONGO_CONFIG = {
+            "mongouri": os.getenv("MONGO_URI"),
+            "db": os.getenv("MONGO_DB_NAME")
+        }
 
 load_dotenv()
 
