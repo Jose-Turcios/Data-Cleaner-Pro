@@ -7,17 +7,39 @@ import os
 import streamlit as st
 
 # Configuración de MongoDB usando secrets.toml
-MONGO_CONFIG = {
-    "mongouri": st.secrets.get("MONGO_URI"),
-    "db": st.secrets.get("MONGO_DB_NAME")
-}
+try:
+    MONGO_CONFIG = {
+        "mongouri": st.secrets["MONGO_URI"],
+        "db": st.secrets["MONGO_DB_NAME"]
+    }
+except KeyError as e:
+    print(f"Error: Secret no encontrado: {e}")
+    MONGO_CONFIG = {
+        "mongouri": None,
+        "db": None
+    }
 
 def extraer_todas_las_colecciones():
     """Extrae todas las colecciones de la base de datos MongoDB"""
     try:
-        client = MongoClient(MONGO_CONFIG["mongouri"])
-        db = client[MONGO_CONFIG["db"]]
+        # Debug: verificar configuración
+        if not MONGO_CONFIG["mongouri"]:
+            print("ERROR: MONGO_URI no está configurado")
+            return []
         
+        if not MONGO_CONFIG["db"]:
+            print("ERROR: MONGO_DB_NAME no está configurado")
+            return []
+        
+        print(f"Intentando conectar a base de datos: {MONGO_CONFIG['db']}")
+        
+        client = MongoClient(MONGO_CONFIG["mongouri"])
+        
+        # Test de conexión
+        client.admin.command('ping')
+        print("✓ Conexión a MongoDB exitosa")
+        
+        db = client[MONGO_CONFIG["db"]]
         colecciones = db.list_collection_names()
         
         print(f"Base de datos: {MONGO_CONFIG['db']}")
@@ -31,6 +53,7 @@ def extraer_todas_las_colecciones():
         
     except Exception as e:
         print(f"Error al conectar con MongoDB: {e}")
+        print(f"Tipo de error: {type(e).__name__}")
         return []
 
 def extraer_datos_coleccion(nombre_coleccion, limite=None):
