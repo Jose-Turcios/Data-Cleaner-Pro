@@ -17,9 +17,9 @@ try:
     # Importar configuración de autenticación
     from config.database_config import LOGIN_CONFIG
 except ImportError:
-    # Fallback si no se puede importar
+    # Fallback si no se puede importar - usar la contraseña directamente
     LOGIN_CONFIG = {
-        "password": os.getenv("LOGIN_PASSWORD"),
+        "password": "d@t@.2026",
         "title": "Data Cleaner Pro", 
         "subtitle": "Sistema de Procesamiento de Limpieza de Datos"
     }
