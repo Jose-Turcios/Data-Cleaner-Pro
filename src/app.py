@@ -9,14 +9,8 @@ from datetime import datetime
 from utils.data_cleaner import DataCleaner
 from utils.file_handler import FileHandler
 from mongo_extractor import crear_dataframes_de_todas_las_colecciones
-from config.database_config import LOGIN_CONFIG 
-
-# Configuración de autenticación usando variables de entorno
-LOGIN_CONFIG = {
-    "password": os.getenv("LOGIN_PASSWORD", "default_password"),
-    "title": os.getenv("APP_TITLE", "Data Cleaner Pro"),
-    "subtitle": os.getenv("APP_SUBTITLE", "Sistema de Procesamiento de Limpieza de Datos")
-}
+# Importar configuración de autenticación
+from config.database_config import LOGIN_CONFIG
 
 def show_login_screen():
     st.set_page_config(
