@@ -1,4 +1,5 @@
 .claude/
-config/
+.streamlit/
 data/
 _pycache_/
+config/
