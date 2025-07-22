@@ -4,28 +4,13 @@ import logging
 from datetime import datetime, timedelta
 import sys
 import os
-from dotenv import load_dotenv
+import streamlit as st
 
-# Importar configuración desde config
-try:
-    from config.database_config import MONGO_CONFIG
-except ImportError:
-    # Fallback usando solo variables de entorno
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(current_dir)
-    config_path = os.path.join(parent_dir, 'config', 'database_config.py')
-    
-    if os.path.exists(config_path):
-        sys.path.insert(0, parent_dir)
-        from config.database_config import MONGO_CONFIG
-    else:
-        # Solo usar variables de entorno sin valores por defecto
-        MONGO_CONFIG = {
-            "mongouri": os.getenv("MONGO_URI"),
-            "db": os.getenv("MONGO_DB_NAME")
-        }
-
-load_dotenv()
+# Configuración de MongoDB usando secrets.toml
+MONGO_CONFIG = {
+    "mongouri": st.secrets.get("MONGO_URI"),
+    "db": st.secrets.get("MONGO_DB_NAME")
+}
 
 def extraer_todas_las_colecciones():
     """Extrae todas las colecciones de la base de datos MongoDB"""

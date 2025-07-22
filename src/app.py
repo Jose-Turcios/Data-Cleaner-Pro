@@ -9,11 +9,11 @@ from datetime import datetime
 from utils.data_cleaner import DataCleaner
 from utils.file_handler import FileHandler
 from mongo_extractor import crear_dataframes_de_todas_las_colecciones
-# Configuración de autenticación con contraseña correcta
+# Configuración de autenticación usando secrets.toml
 LOGIN_CONFIG = {
-    "password": "d@t@.2026",
-    "title": "Data Cleaner Pro",
-    "subtitle": "Sistema de Procesamiento de Limpieza de Datos"
+    "password": st.secrets.get("LOGIN_PASSWORD"),
+    "title": st.secrets.get("APP_TITLE", "Data Cleaner Pro"),
+    "subtitle": st.secrets.get("APP_SUBTITLE", "Sistema de Procesamiento de Limpieza de Datos")
 }
 
 def show_login_screen():
