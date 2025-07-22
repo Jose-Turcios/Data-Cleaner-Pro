@@ -10,25 +10,12 @@ from utils.data_cleaner import DataCleaner
 from utils.file_handler import FileHandler
 from mongo_extractor import crear_dataframes_de_todas_las_colecciones
 
-# Importar configuración de autenticación
-try:
-    from config.database_config import LOGIN_CONFIG
-except ImportError:
-    # Fallback usando solo variables de entorno
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(current_dir)
-    config_path = os.path.join(parent_dir, 'config', 'database_config.py')
-    
-    if os.path.exists(config_path):
-        sys.path.insert(0, parent_dir)
-        from config.database_config import LOGIN_CONFIG
-    else:
-        # Solo usar variables de entorno sin valores por defecto
-        LOGIN_CONFIG = {
-            "password": os.getenv("LOGIN_PASSWORD"),
-            "title": os.getenv("APP_TITLE", "Data Cleaner Pro"),
-            "subtitle": os.getenv("APP_SUBTITLE", "Sistema de Procesamiento de Limpieza de Datos")
-        }
+# Configuración de autenticación usando variables de entorno
+LOGIN_CONFIG = {
+    "password": os.getenv("LOGIN_PASSWORD", "default_password"),
+    "title": os.getenv("APP_TITLE", "Data Cleaner Pro"),
+    "subtitle": os.getenv("APP_SUBTITLE", "Sistema de Procesamiento de Limpieza de Datos")
+}
 
 def show_login_screen():
     st.set_page_config(
