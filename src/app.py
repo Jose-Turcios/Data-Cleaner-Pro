@@ -843,252 +843,253 @@ with tab2:
         </div>
         """, unsafe_allow_html=True)
 
-# Mostrar resultados de la plantilla transformada
-if 'transformed_df' in st.session_state:
-    st.markdown("---")
-    
-    # Header de resultados de plantilla
-    template_results_header = st.container()
-    with template_results_header:
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            st.markdown("### 📊 Plantilla Transformada")
-            original_filename = st.session_state.get('original_template_filename', 'archivo.csv')
-            st.caption(f"Generada desde: **{original_filename}**")
+    # Mostrar resultados de la plantilla transformada dentro de la pestaña
+    if 'transformed_df' in st.session_state:
+        st.markdown("---")
         
-        with col2:
-            # Botón de descarga de Excel
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"plantilla_transformada_{timestamp}.xlsx"
+        # Header de resultados de plantilla
+        template_results_header = st.container()
+        with template_results_header:
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.markdown("### 📊 Plantilla Transformada")
+                original_filename = st.session_state.get('original_template_filename', 'archivo.csv')
+                st.caption(f"Generada desde: **{original_filename}**")
             
-            # Crear archivo Excel en memoria
-            from io import BytesIO
-            output = BytesIO()
-            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                st.session_state['transformed_df'].to_excel(writer, sheet_name='Plantilla', index=False)
+            with col2:
+                # Botón de descarga de Excel
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"plantilla_transformada_{timestamp}.xlsx"
+                
+                # Crear archivo Excel en memoria
+                from io import BytesIO
+                output = BytesIO()
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    st.session_state['transformed_df'].to_excel(writer, sheet_name='Plantilla', index=False)
+                
+                st.download_button(
+                    label="📥 Descargar Excel",
+                    data=output.getvalue(),
+                    file_name=filename,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    type="primary",
+                    use_container_width=True
+                )
+        
+        transformed_df = st.session_state['transformed_df']
+        
+        # Métricas de la plantilla transformada
+        metrics_container = st.container()
+        with metrics_container:
+            col1, col2, col3, col4 = st.columns(4)
             
-            st.download_button(
-                label="📥 Descargar Excel",
-                data=output.getvalue(),
-                file_name=filename,
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                type="primary",
-                use_container_width=True
-            )
-    
-    transformed_df = st.session_state['transformed_df']
-    
-    # Métricas de la plantilla transformada
-    metrics_container = st.container()
-    with metrics_container:
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-value">{len(transformed_df):,}</div>
-                <div class="metric-label">📊 Total Filas</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col2:
-            unique_db = transformed_df['DB'].nunique()
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-value">{unique_db}</div>
-                <div class="metric-label">🏢 Empresas Únicas</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col3:
-            unique_columns = transformed_df['COLUMNA'].nunique()
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-value">{unique_columns}</div>
-                <div class="metric-label">📋 Columnas 'U'</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col4:
-            unique_items = transformed_df['Codigo_SAP'].nunique()
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-value">{unique_items}</div>
-                <div class="metric-label">🔢 Códigos SAP</div>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    # Vista previa de la plantilla transformada
-    st.markdown("### 👁️ Vista Previa de la Plantilla")
-    with st.expander("Mostrar plantilla transformada", expanded=True):
-        st.dataframe(transformed_df.head(20), use_container_width=True, height=400)
-    
-    # Información adicional
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("**Estructura de la Plantilla:**")
-        st.write("• **Pais**: Columna vacía")
-        st.write("• **DB**: Contenido de la columna 'Empresa'")
-        st.write("• **COLUMNA**: Nombres de columnas que empiezan con 'U'")
-        st.write("• **Codigo_SAP**: Código del item")
-        st.write("• **VALOR**: Valores de las columnas 'U'")
-    
-    with col2:
-        st.markdown("**Resumen de Transformación:**")
-        st.write(f"• Total de registros: {len(transformed_df):,}")
-        st.write(f"• Empresas procesadas: {unique_db}")
-        st.write(f"• Columnas 'U' encontradas: {unique_columns}")
-        st.write(f"• Códigos SAP únicos: {unique_items}")
-
-# Espaciado y separador
-st.markdown("<br>", unsafe_allow_html=True)
-
-# Mostrar resultados con diseño mejorado
-if 'cleaned_data' in st.session_state:
-    st.markdown("---")
-    
-    # Header de resultados
-    results_header = st.container()
-    with results_header:
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            st.markdown("### 🎯 Resultados del Procesamiento")
-            brand_used = st.session_state.get('processing_brand', 'N/A')
-            st.caption(f"Procesado como: **{brand_used}** • {st.session_state.get('original_filename', 'archivo.csv')}")
-        
-        with col2:
-            # Botón de descarga principal
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"{brand_used.lower()}_cleaned_{timestamp}.csv"
-            csv_data = st.session_state['cleaned_data'].to_csv(index=False, sep=';')
+            with col1:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value">{len(transformed_df):,}</div>
+                    <div class="metric-label">📊 Total Filas</div>
+                </div>
+                """, unsafe_allow_html=True)
             
-            st.download_button(
-                label="💾 Descargar",
-                data=csv_data,
-                file_name=filename,
-                mime="text/csv",
-                type="primary",
-                use_container_width=True
-            )
-    
-    cleaned_df = st.session_state['cleaned_data']
-    
-    # Métricas principales en cards
-    metrics_container = st.container()
-    with metrics_container:
-        col1, col2, col3, col4, col5 = st.columns(5)
+            with col2:
+                unique_db = transformed_df['DB'].nunique()
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value">{unique_db}</div>
+                    <div class="metric-label">🏢 Empresas Únicas</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col3:
+                unique_columns = transformed_df['COLUMNA'].nunique()
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value">{unique_columns}</div>
+                    <div class="metric-label">📋 Columnas 'U'</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col4:
+                unique_items = transformed_df['Codigo_SAP'].nunique()
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value">{unique_items}</div>
+                    <div class="metric-label">🔢 Códigos SAP</div>
+                </div>
+                """, unsafe_allow_html=True)
         
-        with col1:
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-value">{len(cleaned_df):,}</div>
-                <div class="metric-label">📊 Total Filas</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col2:
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-value">{len(cleaned_df.columns)}</div>
-                <div class="metric-label">📋 Columnas</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col4:
-            null_rows = cleaned_df.isnull().sum().sum()
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-value" style="color: #dc2626;">{null_rows:,}</div>
-                <div class="metric-label">❌ Celdas Incompletas</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with col3:
-            complete_rows = cleaned_df.notnull().sum().sum()
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-value" style="color: #12a14b;">{complete_rows:,}</div>
-                <div class="metric-label">✅ Celdas Completas</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col5:
-            completeness = (complete_rows - null_rows) / complete_rows * 100 if complete_rows > 0 else 0
-            color = "#059669" if completeness > 80 else "#d97706" if completeness > 60 else "#dc2626"
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-value" style="color: {color};">{completeness:.1f}%</div>
-                <div class="metric-label">✅ Completitud</div>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    # Tabs para diferentes vistas
-    tab1, tab2 = st.tabs(["📋 Datos Procesados", "📈 Análisis de Calidad"])
-    
-    with tab1:
-        st.markdown("#### Vista de Datos")
-        st.dataframe(cleaned_df, use_container_width=True, height=400)
+        # Vista previa de la plantilla transformada
+        st.markdown("### 👁️ Vista Previa de la Plantilla")
+        with st.expander("Mostrar plantilla transformada", expanded=True):
+            st.dataframe(transformed_df.head(20), use_container_width=True, height=400)
         
         # Información adicional
         col1, col2 = st.columns(2)
         with col1:
-            st.markdown("**Primeras columnas:**")
-            st.write(list(cleaned_df.columns[:5]))
+            st.markdown("**Estructura de la Plantilla:**")
+            st.write("• **Pais**: Columna vacía")
+            st.write("• **DB**: Contenido de la columna 'Empresa'")
+            st.write("• **COLUMNA**: Nombres de columnas que empiezan con 'U'")
+            st.write("• **Codigo_SAP**: Código del item")
+            st.write("• **VALOR**: Valores de las columnas 'U'")
+        
         with col2:
-            st.markdown("**Últimas columnas:**")
-            st.write(list(cleaned_df.columns[-5:]))
-    
-    with tab2:
-        st.markdown("#### Análisis de Calidad de Datos")
+            st.markdown("**Resumen de Transformación:**")
+            st.write(f"• Total de registros: {len(transformed_df):,}")
+            st.write(f"• Empresas procesadas: {unique_db}")
+            st.write(f"• Columnas 'U' encontradas: {unique_columns}")
+            st.write(f"• Códigos SAP únicos: {unique_items}")
+
+with tab1:
+    # Mostrar resultados de limpieza dentro de la pestaña tab1
+    if 'cleaned_data' in st.session_state:
+        st.markdown("---")
         
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("**Valores Nulos por Columna**")
-            null_counts = cleaned_df.isnull().sum()
-            null_df = pd.DataFrame({
-                'Columna': null_counts.index,
-                'Nulos': null_counts.values,
-                'Porcentaje': (null_counts.values / len(cleaned_df) * 100).round(1)
-            })
-            null_df = null_df[null_df['Nulos'] > 0]  # Solo mostrar columnas con nulos
+        # Header de resultados
+        results_header = st.container()
+        with results_header:
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.markdown("### 🎯 Resultados del Procesamiento")
+                brand_used = st.session_state.get('processing_brand', 'N/A')
+                st.caption(f"Procesado como: **{brand_used}** • {st.session_state.get('original_filename', 'archivo.csv')}")
             
-            if len(null_df) > 0:
-                st.dataframe(null_df, use_container_width=True, height=300)
+            with col2:
+                # Botón de descarga principal
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"{brand_used.lower()}_cleaned_{timestamp}.csv"
+                csv_data = st.session_state['cleaned_data'].to_csv(index=False, sep=';')
+                
+                st.download_button(
+                    label="💾 Descargar",
+                    data=csv_data,
+                    file_name=filename,
+                    mime="text/csv",
+                    type="primary",
+                    use_container_width=True
+                )
+        
+        cleaned_df = st.session_state['cleaned_data']
+        
+        # Métricas principales en cards
+        metrics_container = st.container()
+        with metrics_container:
+            col1, col2, col3, col4, col5 = st.columns(5)
+            
+            with col1:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value">{len(cleaned_df):,}</div>
+                    <div class="metric-label">📊 Total Filas</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col2:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value">{len(cleaned_df.columns)}</div>
+                    <div class="metric-label">📋 Columnas</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col4:
+                null_rows = cleaned_df.isnull().sum().sum()
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value" style="color: #dc2626;">{null_rows:,}</div>
+                    <div class="metric-label">❌ Celdas Incompletas</div>
+                </div>
+                """, unsafe_allow_html=True)
+    
+            with col3:
+                complete_rows = cleaned_df.notnull().sum().sum()
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value" style="color: #12a14b;">{complete_rows:,}</div>
+                    <div class="metric-label">✅ Celdas Completas</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col5:
+                completeness = (complete_rows - null_rows) / complete_rows * 100 if complete_rows > 0 else 0
+                color = "#059669" if completeness > 80 else "#d97706" if completeness > 60 else "#dc2626"
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-value" style="color: {color};">{completeness:.1f}%</div>
+                    <div class="metric-label">✅ Completitud</div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        # Tabs para diferentes vistas dentro de la pestaña de limpieza
+        results_tab1, results_tab2 = st.tabs(["📋 Datos Procesados", "📈 Análisis de Calidad"])
+        
+        with results_tab1:
+            st.markdown("#### Vista de Datos")
+            st.dataframe(cleaned_df, use_container_width=True, height=400)
+            
+            # Información adicional
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("**Primeras columnas:**")
+                st.write(list(cleaned_df.columns[:5]))
+            with col2:
+                st.markdown("**Últimas columnas:**")
+                st.write(list(cleaned_df.columns[-5:]))
+        
+        with results_tab2:
+            st.markdown("#### Análisis de Calidad de Datos")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("**Valores Nulos por Columna**")
+                null_counts = cleaned_df.isnull().sum()
+                null_df = pd.DataFrame({
+                    'Columna': null_counts.index,
+                    'Nulos': null_counts.values,
+                    'Porcentaje': (null_counts.values / len(cleaned_df) * 100).round(1)
+                })
+                null_df = null_df[null_df['Nulos'] > 0]  # Solo mostrar columnas con nulos
+                
+                if len(null_df) > 0:
+                    st.dataframe(null_df, use_container_width=True, height=300)
+                else:
+                    st.success("🎉 ¡No hay valores nulos en ninguna columna!")
+            
+            with col2:
+                st.markdown("**Estadísticas de Tipos de Datos**")
+                dtypes_count = cleaned_df.dtypes.value_counts()
+                dtypes_df = pd.DataFrame({
+                    'Tipo': dtypes_count.index.astype(str),
+                    'Cantidad': dtypes_count.values
+                })
+                st.dataframe(dtypes_df, use_container_width=True, height=300)
+            
+            # Resumen de calidad
+            st.markdown("#### 📊 Resumen de Calidad")
+            total_cells = len(cleaned_df) * len(cleaned_df.columns)
+            null_cells = cleaned_df.isnull().sum().sum()
+            quality_score = ((total_cells - null_cells) / total_cells * 100) if total_cells > 0 else 0
+            
+            if quality_score >= 95:
+                quality_status = "🟢 Excelente"
+                quality_color = "#059669"
+            elif quality_score >= 80:
+                quality_status = "🟡 Buena"
+                quality_color = "#d97706"
             else:
-                st.success("🎉 ¡No hay valores nulos en ninguna columna!")
-        
-        with col2:
-            st.markdown("**Estadísticas de Tipos de Datos**")
-            dtypes_count = cleaned_df.dtypes.value_counts()
-            dtypes_df = pd.DataFrame({
-                'Tipo': dtypes_count.index.astype(str),
-                'Cantidad': dtypes_count.values
-            })
-            st.dataframe(dtypes_df, use_container_width=True, height=300)
-        
-        # Resumen de calidad
-        st.markdown("#### 📊 Resumen de Calidad")
-        total_cells = len(cleaned_df) * len(cleaned_df.columns)
-        null_cells = cleaned_df.isnull().sum().sum()
-        quality_score = ((total_cells - null_cells) / total_cells * 100) if total_cells > 0 else 0
-        
-        if quality_score >= 95:
-            quality_status = "🟢 Excelente"
-            quality_color = "#059669"
-        elif quality_score >= 80:
-            quality_status = "🟡 Buena"
-            quality_color = "#d97706"
-        else:
-            quality_status = "🔴 Requiere atención"
-            quality_color = "#dc2626"
-        
-        st.markdown(f"""
-        <div style="background: {quality_color}15; border: 1px solid {quality_color}30; border-radius: 8px; padding: 1.5rem; margin: 1rem 0;">
-            <h4 style="color: {quality_color}; margin: 0;">Puntuación de Calidad: {quality_score:.1f}%</h4>
-            <p style="margin: 0.5rem 0 0 0; color: #64748b;">Estado: {quality_status}</p>
-        </div>
-        """, unsafe_allow_html=True)
+                quality_status = "🔴 Requiere atención"
+                quality_color = "#dc2626"
+            
+            st.markdown(f"""
+            <div style="background: {quality_color}15; border: 1px solid {quality_color}30; border-radius: 8px; padding: 1.5rem; margin: 1rem 0;">
+                <h4 style="color: {quality_color}; margin: 0;">Puntuación de Calidad: {quality_score:.1f}%</h4>
+                <p style="margin: 0.5rem 0 0 0; color: #64748b;">Estado: {quality_status}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+# Espaciado
+st.markdown("<br>", unsafe_allow_html=True)
     
     
 
