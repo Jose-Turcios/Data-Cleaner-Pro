@@ -93,7 +93,8 @@ class DataCleaner:
                 return df.copy()
         
         return pd.DataFrame()
-    
+
+# Cole Haan limpieza
     def _clean_cole_haan(self, df: pd.DataFrame) -> pd.DataFrame:
         """Proceso de limpieza para Cole Haan usando DataFrames de MongoDB"""
         cleaned_df = df.copy()
@@ -159,6 +160,7 @@ class DataCleaner:
         
         return df_resultado
     
+# Columbia limpieza
     def _clean_columbia(self, df: pd.DataFrame) -> pd.DataFrame:
         """Proceso de limpieza para Columbia usando DataFrames de MongoDB"""
         cleaned_df = df.copy()
@@ -199,6 +201,7 @@ class DataCleaner:
         
         return cleaned_df
     
+# Skechers limpieza
     def _clean_skechers(self, df: pd.DataFrame) -> pd.DataFrame:
         """Proceso de limpieza para Skechers usando DataFrames de MongoDB"""
         # El DF de entrada es como sk.csv
@@ -309,6 +312,7 @@ class DataCleaner:
         
         return df_final
     
+# New Era limpieza
     def _clean_new_era(self, df: pd.DataFrame) -> pd.DataFrame:
         """Proceso de limpieza para New Era usando DataFrames de MongoDB"""
         # El DF de entrada es como DataNull.csv
