@@ -11,7 +11,7 @@ class DataCleaner:
         Inicializa el DataCleaner con la marca y los DataFrames de MongoDB.
         
         Args:
-            brand: Código de la marca (CH, CL, SK, NE, etc.)
+            brand: Código de la marca (CH, CL, SK, NE, FB, etc.)
             mongo_dataframes: Diccionario con los DataFrames de MongoDB (colecciones por marca)
         """
         self.brand = brand.upper()
@@ -50,6 +50,12 @@ class DataCleaner:
             "AD": {
                 "name": "Adolfo",
                 "columns": ["ItemName", "ItemCode", "Empresa", "U_Estilo", "U_Genero", "U_Categoria"]
+            },
+            "FB": {
+                "name": "Fabletics",
+                "columns": ["ItemName", "ItemCode", "Empresa", "U_Estilo", "U_Estilo_Color", 
+                           "U_Descripcion", "U_Descrip_Color", "U_Talla", "U_Genero", "U_Segmento", 
+                           "U_Prenda", "U_Subprenda", "U_Categoria"]
             }
         }
     
@@ -76,6 +82,8 @@ class DataCleaner:
             cleaned_df = self._clean_skechers(cleaned_df)
         elif self.brand == "NE":
             cleaned_df = self._clean_new_era(cleaned_df)
+        elif self.brand == "FB":
+            cleaned_df = self._clean_fabletics(cleaned_df)
         elif self.brand in ["BI", "PB", "AD"]:
             cleaned_df = self._clean_generic_brand(cleaned_df)
         
@@ -94,7 +102,7 @@ class DataCleaner:
         
         return pd.DataFrame()
 
-# Cole Haan limpieza
+    # Cole Haan limpieza
     def _clean_cole_haan(self, df: pd.DataFrame) -> pd.DataFrame:
         """Proceso de limpieza para Cole Haan usando DataFrames de MongoDB"""
         cleaned_df = df.copy()
@@ -160,7 +168,7 @@ class DataCleaner:
         
         return df_resultado
     
-# Columbia limpieza
+    # Columbia limpieza
     def _clean_columbia(self, df: pd.DataFrame) -> pd.DataFrame:
         """Proceso de limpieza para Columbia usando DataFrames de MongoDB"""
         cleaned_df = df.copy()
@@ -201,7 +209,7 @@ class DataCleaner:
         
         return cleaned_df
     
-# Skechers limpieza
+    # Skechers limpieza
     def _clean_skechers(self, df: pd.DataFrame) -> pd.DataFrame:
         """Proceso de limpieza para Skechers usando DataFrames de MongoDB"""
         # El DF de entrada es como sk.csv
@@ -312,7 +320,7 @@ class DataCleaner:
         
         return df_final
     
-# New Era limpieza
+    # New Era limpieza
     def _clean_new_era(self, df: pd.DataFrame) -> pd.DataFrame:
         """Proceso de limpieza para New Era usando DataFrames de MongoDB"""
         # El DF de entrada es como DataNull.csv
@@ -399,6 +407,94 @@ class DataCleaner:
                 df_null.at[index, 'U_Liga'] = team_licenses[equipo]
         
         return df_null
+    
+    # Fabletics limpieza
+    def _clean_fabletics(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Proceso de limpieza para Fabletics usando DataFrames de MongoDB"""
+        df_fb = df.copy()
+        
+        # Obtener DataFrame de referencia de MongoDB
+        df_db = self._get_reference_dataframe("FB")
+        if df_db.empty:
+            st.warning("No se encontró el DataFrame de referencia para Fabletics")
+            # Continuar con la limpieza básica aunque no haya datos de referencia
+        
+        # 1. Extraer U_Estilo (primer elemento antes del primer '-')
+        df_fb['U_Estilo'] = df_fb['ItemName'].str.split('-').str[0]
+        
+        # 2. Extraer U_Estilo_Color (primeros 2 elementos después de dividir por '-')
+        df_fb['U_Estilo_Color'] = df_fb['ItemName'].str.split('-').str[:2].str.join('-')
+        
+        # 3. Extraer información del ItemName usando '/' como delimitador
+        df_fb['U_Descripcion'] = df_fb['ItemName'].str.split('/').str[1]
+        df_fb['U_Descrip_Color'] = df_fb['ItemName'].str.split('/').str[2]
+        df_fb['U_Talla'] = df_fb['ItemName'].str.split('/').str[3]
+        
+        # 4. Si existe el DataFrame de referencia, hacer el merge
+        if not df_db.empty:
+            # Identificar columnas comunes entre ambos DataFrames
+            common_cols = df_fb.columns.intersection(df_db.columns).tolist()
+            
+            # Mantener U_Estilo para el merge
+            if 'U_Estilo' in common_cols:
+                common_cols.remove('U_Estilo')
+            
+            # Eliminar U_Division de las columnas a eliminar si existe
+            cols_to_drop = [col for col in common_cols if col != 'U_Division']
+            
+            # Preparar DataFrame de referencia para el primer merge (por U_Estilo)
+            merge_cols_estilo = ['U_Estilo'] + [col for col in df_db.columns 
+                                                if col not in cols_to_drop and col != 'U_Estilo' and col != 'U_Estilo_Color' and col != 'U_Division']
+            
+            if len(merge_cols_estilo) > 1:  # Si hay columnas además de U_Estilo
+                df_db_estilo = df_db[merge_cols_estilo].drop_duplicates('U_Estilo')
+                
+                # Asegurar tipo compatible
+                df_fb['U_Estilo'] = df_fb['U_Estilo'].astype(str)
+                df_db_estilo['U_Estilo'] = df_db_estilo['U_Estilo'].astype(str)
+                
+                # Primer merge por U_Estilo
+                df_fb = pd.merge(df_fb, df_db_estilo, on='U_Estilo', how='left', suffixes=('', '_ref'))
+                
+                # Completar valores faltantes con los de referencia
+                for col in df_db_estilo.columns:
+                    if col != 'U_Estilo' and f'{col}_ref' in df_fb.columns:
+                        df_fb[col] = df_fb[col].fillna(df_fb[f'{col}_ref'])
+                        df_fb.drop(columns=[f'{col}_ref'], inplace=True)
+            
+            # Segundo merge por U_Estilo_Color para obtener U_Division
+            if 'U_Estilo_Color' in df_db.columns and 'U_Division' in df_db.columns:
+                df_db_division = df_db[['U_Estilo_Color', 'U_Division']].drop_duplicates('U_Estilo_Color')
+                
+                # Asegurar tipo compatible
+                df_fb['U_Estilo_Color'] = df_fb['U_Estilo_Color'].astype(str)
+                df_db_division['U_Estilo_Color'] = df_db_division['U_Estilo_Color'].astype(str)
+                
+                # Merge para U_Division
+                df_fb = pd.merge(df_fb, df_db_division, on='U_Estilo_Color', how='left', suffixes=('', '_div'))
+                
+                # Completar U_Division si existe una columna duplicada
+                if 'U_Division_div' in df_fb.columns:
+                    df_fb['U_Division'] = df_fb['U_Division'].fillna(df_fb['U_Division_div'])
+                    df_fb.drop(columns=['U_Division_div'], inplace=True)
+        
+        # 5. Reordenar columnas según el orden esperado
+        column_order = ['ItemName', 'ItemCode', 'Empresa', 'U_Estilo', 'U_Estilo_Color', 
+                       'U_Descripcion', 'U_Descrip_Color', 'U_Talla', 'U_Genero', 'U_Segmento', 
+                       'U_Prenda', 'U_Subprenda', 'U_Categoria', 'U_Division']
+        
+        # Seleccionar solo las columnas que existen en el DataFrame
+        existing_columns = [col for col in column_order if col in df_fb.columns]
+        df_fb = df_fb[existing_columns]
+        
+        # Mostrar estadísticas de limpieza
+        total_rows = len(df_fb)
+        completed_rows = len(df_fb[df_fb['U_Genero'].notna() | df_fb['U_Segmento'].notna() | 
+                                   df_fb['U_Prenda'].notna() | df_fb['U_Categoria'].notna()])
+        
+        st.success(f"Fabletics: Se completaron {completed_rows} de {total_rows} filas con datos de MongoDB")
+        
+        return df_fb
     
     def _clean_generic_brand(self, df: pd.DataFrame) -> pd.DataFrame:
         """Proceso de limpieza genérico para marcas sin proceso específico (Birkenstock, Psycho Bunny, Adolfo)"""

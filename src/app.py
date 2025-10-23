@@ -175,7 +175,7 @@ def detect_brand_from_filename(filename):
         return l_pattern.group(1)
     
     # Buscar patrones directos (ej: ejemplo_CH.csv)
-    for marca in ['CH', 'CL', 'NE', 'SK']:
+    for marca in ['CH', 'CL', 'NE', 'SK', 'FB']:
         if marca in filename_upper:
             return marca
     
@@ -468,7 +468,7 @@ with st.sidebar:
     st.markdown("#### 🏷️ Marca")
     brand = st.selectbox(
         "Seleccionar marca:",
-        ["CH", "CL", "SK", "NE"],
+        ["CH", "CL", "SK", "NE", "FB"],
         help="Elige la marca a procesar",
         label_visibility="collapsed"
     )
@@ -478,7 +478,8 @@ with st.sidebar:
         "CH": {"name": "Cole Haan", "icon": "👞", "color": "#8B4513"},
         "CL": {"name": "Columbia", "icon": "🧥", "color": "#1E40AF"},
         "SK": {"name": "Skechers", "icon": "👟", "color": "#DC2626"},
-        "NE": {"name": "New Era", "icon": "🧢", "color": "#059669"}
+        "NE": {"name": "New Era", "icon": "🧢", "color": "#059669"},
+        "FB": {"name": "Fabletics", "icon": "🏃", "color": "#E91E63"}
     }
     
     info = brand_info[brand]
@@ -503,7 +504,8 @@ with st.sidebar:
         "CH": os.path.join(base_dir, "data", "ejemplo_CH.csv"),
         "CL": os.path.join(base_dir, "data", "ejemplo_CL.csv"),
         "SK": os.path.join(base_dir, "data", "ejemplo_SK.csv"),
-        "NE": os.path.join(base_dir, "data", "ejemplo_NE.csv")
+        "NE": os.path.join(base_dir, "data", "ejemplo_NE.csv"),
+        "FB": os.path.join(base_dir, "data", "ejemplo_FB.csv")
     }
     
     # Crear botones de descarga para cada marca
