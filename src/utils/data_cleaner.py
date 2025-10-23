@@ -183,6 +183,7 @@ class DataCleaner:
         # 1. Extraer información de ItemName
         cleaned_df['u_estilo'] = cleaned_df['ItemName'].str.split('/').str[0]
         cleaned_df['u_descripcion'] = cleaned_df['ItemName'].str.split('/').str[1]
+        cleaned_df['U_Talla'] = cleaned_df['ItemName'].str.split('/').str[2]
         cleaned_df['u_descrip_color'] = cleaned_df['ItemName'].str.split('/').str[3]
         
         # Manejar casos donde u_descrip_color es NaN y convertir a string
@@ -224,7 +225,7 @@ class DataCleaner:
         
         # Inicializar columnas que podrían no existir en el DataFrame de entrada
         required_columns = ['U_Estilo', 'U_Genero', 'U_Suela', 'U_Descrip_Color', 
-                           'U_Segmentacion_SK', 'U_Division', 'U_Temporalidad', 'U_Descripcion']
+                           'U_Segmentacion_SK', 'U_Division', 'U_Temporalidad', 'U_Descripcion', 'U_Talla']
         for col in required_columns:
             if col not in df_null_sk.columns:
                 df_null_sk[col] = np.nan
