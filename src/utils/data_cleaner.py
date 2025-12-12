@@ -45,7 +45,7 @@ class DataCleaner:
             },
             "PB": {
                 "name": "Psycho Bunny",
-                "columns": ["ItemName", "ItemCode", "Empresa", "U_Estilo", "U_Genero", "U_Categoria"]
+                "columns": ["ItemName", "ItemCode", "Empresa", "U_Estilo", "U_Prenda", "U_Subprenda","U_Genero", "U_Descrip_Color", "U_Temporalidad", "U_Talla"]
             },
             "AD": {
                 "name": "Adolfo",
@@ -84,7 +84,9 @@ class DataCleaner:
             cleaned_df = self._clean_new_era(cleaned_df)
         elif self.brand == "FB":
             cleaned_df = self._clean_fabletics(cleaned_df)
-        elif self.brand in ["BI", "PB", "AD"]:
+        elif self.brand == "PB":
+            cleaned_df = self._clean_psycho_bunny(cleaned_df)
+        elif self.brand in ["BI", "AD"]:
             cleaned_df = self._clean_generic_brand(cleaned_df)
         
         return cleaned_df
@@ -496,7 +498,86 @@ class DataCleaner:
         st.success(f"Fabletics: Se completaron {completed_rows} de {total_rows} filas con datos de MongoDB")
         
         return df_fb
-    
+
+    def _clean_psycho_bunny(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Proceso de limpieza para Psycho Bunny optimizado"""
+        # Trabajamos sobre una copia para no afectar el original
+        df_trabajo = df.copy()
+
+        # 1. Obtener DataFrames de referencia de MongoDB
+        df_pb = self._get_reference_dataframe("PB")
+
+        if df_pb.empty:
+            st.warning("No se encontró el DataFrame de referencia para Psycho Bunny")
+            return df_trabajo
+
+        # 2. Extracción eficiente de datos desde ItemName
+        # Asumimos estructura: ESTILO / DESCRIPCION / TALLA / COLOR
+        # Usamos expand=True para hacerlo en una sola pasada
+        split_data = df_trabajo['ItemName'].str.split('/', n=3, expand=True)
+        
+        # Asignamos las columnas si existen en el split, si no quedan como NaN
+        if len(split_data.columns) > 0: df_trabajo['U_Estilo'] = split_data[0]
+        if len(split_data.columns) > 1: df_trabajo['U_Descripcion'] = split_data[1]
+        if len(split_data.columns) > 2: df_trabajo['U_Talla'] = split_data[2]
+        if len(split_data.columns) > 3: df_trabajo['U_Descrip_Color'] = split_data[3]
+
+        # Limpieza específica de Descripción
+        df_trabajo['U_Descripcion'] = df_trabajo['U_Descripcion'].str.replace(
+            r'(?i)americana\s*\d+(?:\.\d+)?', '', regex=True
+        ).str.strip()
+
+        # 3. Preparar Reference Data (MongoDB)
+        # Nos aseguramos de tener columnas únicas para el merge
+        cols_interes = ['U_Genero', 'U_Prenda', 'U_Subprenda', 'U_Temporalidad']
+        available_cols = [c for c in cols_interes if c in df_pb.columns]
+        
+        if 'U_Estilo' in df_pb.columns:
+            # Crear un maestro de estilos únicos
+            df_ref = df_pb[['U_Estilo'] + available_cols].drop_duplicates(subset=['U_Estilo'])
+            
+            # Asegurar tipos de datos para el cruce (String vs String)
+            df_trabajo['U_Estilo'] = df_trabajo['U_Estilo'].astype(str).str.strip()
+            df_ref['U_Estilo'] = df_ref['U_Estilo'].astype(str).str.strip()
+
+            # 4. MERGE ÚNICO (Más eficiente que separar válidos/inválidos)
+            # Hacemos un Left Join: Mantenemos todas las filas de df_trabajo y traemos datos de df_ref
+            df_merged = pd.merge(
+                df_trabajo,
+                df_ref,
+                on='U_Estilo',
+                how='left',
+                suffixes=('', '_mongo')
+            )
+
+            # 5. Rellenar huecos (Fillna)
+            # Si la columna original está vacía, usa la que vino de Mongo
+            for col in available_cols:
+                col_mongo = f"{col}_mongo"
+                if col_mongo in df_merged.columns:
+                    # Prioridad: Dato existente > Dato de Mongo
+                    if col not in df_merged.columns:
+                        df_merged[col] = df_merged[col_mongo]
+                    else:
+                        df_merged[col] = df_merged[col].fillna(df_merged[col_mongo])
+                    
+                    # Eliminamos la columna auxiliar
+                    df_merged.drop(columns=[col_mongo], inplace=True)
+            
+            df_final = df_merged
+        else:
+            st.error("La colección de MongoDB no tiene el campo clave 'U_Estilo'")
+            df_final = df_trabajo
+
+        # 6. Métricas finales
+        total_rows = len(df_final)
+        # Contamos cuántos tienen dato en al menos una columna clave
+        completeness = df_final[available_cols].notna().any(axis=1).sum()
+        
+        st.success(f"Psycho Bunny: Se enriquecieron {completeness} filas usando {len(df_ref)} estilos de referencia.")
+
+        return df_final
+
     def _clean_generic_brand(self, df: pd.DataFrame) -> pd.DataFrame:
         """Proceso de limpieza genérico para marcas sin proceso específico (Birkenstock, Psycho Bunny, Adolfo)"""
         cleaned_df = df.copy()

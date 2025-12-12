@@ -468,7 +468,7 @@ with st.sidebar:
     st.markdown("#### 🏷️ Marca")
     brand = st.selectbox(
         "Seleccionar marca:",
-        ["CH", "CL", "SK", "NE", "FB"],
+        ["CH", "CL", "SK", "NE", "FB", "PB"],
         help="Elige la marca a procesar",
         label_visibility="collapsed"
     )
@@ -479,7 +479,8 @@ with st.sidebar:
         "CL": {"name": "Columbia", "icon": "🧥", "color": "#1E40AF"},
         "SK": {"name": "Skechers", "icon": "👟", "color": "#DC2626"},
         "NE": {"name": "New Era", "icon": "🧢", "color": "#059669"},
-        "FB": {"name": "Fabletics", "icon": "🏃", "color": "#E91E63"}
+        "FB": {"name": "Fabletics", "icon": "🏃", "color": "#E91E63"},
+        "PB": {"name": "Psycho Bunny", "icon": "🐰", "color": "#F80053"}
     }
     
     info = brand_info[brand]
